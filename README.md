@@ -2,8 +2,6 @@
 
 A Kubernetes operator for managing LiteLLM, Ollama, etc. resources, providing seamless integration of AI models from multiple providers through Custom Resource Definitions.
 
-## Overview
-
 This operator extends Kubernetes with custom resources to manage LiteLLM keys and models, enabling declarative configuration of AI model endpoints from various providers including OpenAI, Anthropic, and Ollama.
 
 ## Installation
