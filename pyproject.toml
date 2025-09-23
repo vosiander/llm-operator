@@ -1,5 +1,5 @@
 [project]
-name = "litellm-operator"
+name = "llm-operator"
 version = "0.1.0"
 description = "Kubernetes operator for litellm"
 requires-python = ">=3.13"

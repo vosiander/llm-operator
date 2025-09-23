@@ -9,7 +9,7 @@ dotenv: [.env]
 
 tasks:
   run:
-    desc: Run litellm-operator
+    desc: Run llm-operator
     cmds:
       - uv run kopf run main.py --all-namespaces --liveness http://0.0.0.0:8080/healthz --standalone
 

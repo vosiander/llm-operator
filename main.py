@@ -8,7 +8,7 @@ injector = Injector([KubeModule()])
 
 @kopf.on.startup()
 def startup_fn(settings: kopf.OperatorSettings, **kwargs):
-    logger.info("Starting litellm-operator...")
+    logger.info("Starting llm-operator...")
     logger.debug (f"Operator Settings: {settings}")
 
     if os.getenv("ENABLE_LITELLM_KEY", "true").lower() == "true":
