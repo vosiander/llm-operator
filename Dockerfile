@@ -8,7 +8,8 @@ FROM python:3.12-slim AS builder
 # Copy uv from the official image
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Copy custom CA certificate if needed (following webhookd-uv pattern)
+RUN mkdir -p /cert/
+
 VOLUME /cert
 
 RUN cp /cert/* /usr/local/share/ca-certificates/
