@@ -1,0 +1,123 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "helm.fullname" . }}-cluster
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+rules:
+  # Framework: knowing which other operators are running (i.e. peering).
+  - apiGroups: [kopf.dev]
+    resources: [clusterkopfpeerings]
+    verbs: [list, watch, patch, get]
+
+  # Framework: runtime observation of namespaces & CRDs (addition/deletion).
+  - apiGroups: [apiextensions.k8s.io]
+    resources: [customresourcedefinitions]
+    verbs: [list, watch, get, create, update, patch, delete]
+  - apiGroups: [""]
+    resources: [namespaces]
+    verbs: [list, watch, get]
+
+  # Framework: posting the events about the handlers progress/errors.
+  - apiGroups: [""]
+    resources: [events]
+    verbs: [create, get, list, watch]
+
+  # Framework: admission webhook configuration management.
+  - apiGroups: [admissionregistration.k8s.io/v1, admissionregistration.k8s.io/v1beta1]
+    resources: [validatingwebhookconfigurations, mutatingwebhookconfigurations]
+    verbs: [create, patch, get, list, watch, update, delete]
+
+  # Application: read-only access for watching cluster-wide.
+  - apiGroups: [ops.veitosiander.de]
+    resources: [litellmkeys, litellmmodels, ollamamodels]
+    verbs: [list, watch, get, create, update, patch, delete, deletecollection]
+
+  # Core Kubernetes resources
+  - apiGroups: [""]
+    resources: [pods, services, configmaps, secrets, persistentvolumeclaims, endpoints]
+    verbs: [get, list, watch, create, update, patch, delete, deletecollection]
+
+  # Workload resources
+  - apiGroups: [apps]
+    resources: [deployments, replicasets, daemonsets, statefulsets]
+    verbs: [get, list, watch, create, update, patch, delete, deletecollection]
+
+  # Batch resources
+  - apiGroups: [batch]
+    resources: [jobs, cronjobs]
+    verbs: [get, list, watch, create, update, patch, delete, deletecollection]
+
+  # Extensions resources
+  - apiGroups: [extensions]
+    resources: [deployments, replicasets, ingresses, daemonsets]
+    verbs: [get, list, watch, create, update, patch, delete, deletecollection]
+
+  # Networking resources
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses, networkpolicies, ingressclasses]
+    verbs: [get, list, watch, create, update, patch, delete, deletecollection]
+
+  # RBAC resources
+  - apiGroups: [rbac.authorization.k8s.io]
+    resources: [roles, rolebindings, clusterroles, clusterrolebindings]
+    verbs: [get, list, watch, create, update, patch, delete, deletecollection]
+
+  # Service accounts
+  - apiGroups: [""]
+    resources: [serviceaccounts]
+    verbs: [get, list, watch, create, update, patch, delete, deletecollection]
+
+  # Storage resources
+  - apiGroups: [""]
+    resources: [persistentvolumes]
+    verbs: [get, list, watch, create, update, patch, delete, deletecollection]
+  - apiGroups: [storage.k8s.io]
+    resources: [storageclasses, volumeattachments]
+    verbs: [get, list, watch, create, update, patch, delete, deletecollection]
+
+  # Autoscaling resources
+  - apiGroups: [autoscaling]
+    resources: [horizontalpodautoscalers]
+    verbs: [get, list, watch, create, update, patch, delete, deletecollection]
+
+  # Policy resources
+  - apiGroups: [policy]
+    resources: [poddisruptionbudgets, podsecuritypolicies]
+    verbs: [get, list, watch, create, update, patch, delete, deletecollection]
+
+  # Metrics resources
+  - apiGroups: [metrics.k8s.io]
+    resources: [pods, nodes]
+    verbs: [get, list]
+
+  # Custom metrics
+  - apiGroups: [custom.metrics.k8s.io]
+    resources: ["*"]
+    verbs: [get, list]
+
+  # Monitoring resources (Prometheus)
+  - apiGroups: [monitoring.coreos.com]
+    resources: [servicemonitors, prometheusrules, podmonitors]
+    verbs: [get, list, watch, create, update, patch, delete, deletecollection]
+
+  # Certificate management
+  - apiGroups: [cert-manager.io]
+    resources: [certificates, certificaterequests, issuers, clusterissuers]
+    verbs: [get, list, watch, create, update, patch, delete, deletecollection]
+
+  # Node resources
+  - apiGroups: [""]
+    resources: [nodes]
+    verbs: [get, list, watch]
+
+  # Resource status updates
+  - apiGroups: [""]
+    resources: [pods/status, services/status]
+    verbs: [get, update, patch]
+  - apiGroups: [apps]
+    resources: [deployments/status, replicasets/status, daemonsets/status, statefulsets/status]
+    verbs: [get, update, patch]
+  - apiGroups: [extensions]
+    resources: [deployments/status, replicasets/status, daemonsets/status]
+    verbs: [get, update, patch]

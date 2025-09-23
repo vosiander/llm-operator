@@ -1,0 +1,93 @@
+version: '3'
+
+vars:
+  CURRENT_DIR: { sh: pwd }
+  KUBECONFIG_MRS: $HOME/.kube/mrs-k0s.conf
+  NAMESPACE: operator-system
+
+dotenv: [.env]
+
+tasks:
+  run:
+    desc: Run litellm-operator
+    cmds:
+      - uv run kopf run main.py --all-namespaces --liveness http://0.0.0.0:8080/healthz --standalone
+
+  helm-registry-login:
+    desc: Login to GitHub Container Registry for Helm
+    silent: true
+    cmds:
+      - if [ -z "$GITHUB_TOKEN" ]; then echo "GITHUB_TOKEN not set" && exit 1; fi
+      - echo "$GITHUB_TOKEN" | helm registry login ghcr.io -u vosiander --password-stdin
+
+  create-ghcr-secret:
+    desc: Create Kubernetes secret for GitHub Container Registry authentication
+    silent: true
+    cmds:
+      - if [ -z "$GITHUB_TOKEN" ]; then echo "GITHUB_TOKEN not set" && exit 1; fi
+      - kubectl create namespace {{.NAMESPACE}} || true
+      - kubectl delete secret ghcr-registry-secret --namespace {{.NAMESPACE}} || true
+      - kubectl create secret docker-registry ghcr-registry-secret --docker-server=ghcr.io --docker-username=vosiander --docker-password="$GITHUB_TOKEN" --namespace {{.NAMESPACE}}
+      - echo "Created secret ghcr-registry-secret in namespace {{.NAMESPACE}}"
+
+  helm-install:
+    desc: Install or upgrade the Helm chart
+    silent: true
+    cmds:
+      - task: helm-registry-login
+      - task: create-ghcr-secret
+      - if [ -z "{{.VERSION}}" ]; then echo "VERSION not set" && exit 1; fi
+      - kubectl create namespace {{.NAMESPACE}} || true
+      - helm upgrade --install litellm-operator oci://ghcr.io/vosiander/charts/litellm-operator --namespace {{.NAMESPACE}} --version {{.VERSION}} -f values.yaml
+
+  helm-uninstall:
+    desc: Uninstall the Helm chart
+    silent: true
+    cmds:
+      - helm uninstall litellm-operator --namespace {{.NAMESPACE}} || true
+      - kubectl delete namespace {{.NAMESPACE}} || true
+
+  generate-crds:
+    desc: Generate CRDs for debugging
+    silent: true
+    cmds:
+      - uv run cli.py generate-crds
+
+  clean-example:
+    desc: Clean up example resources
+    silent: true
+    cmds:
+      - kubectl patch crd litellmkeys.ops.veitosiander.de --type merge -p '{"metadata":{"finalizers":[]}}' || true
+      - kubectl patch crd litellmmodels.ops.veitosiander.de --type merge -p '{"metadata":{"finalizers":[]}}' || true
+      - kubectl delete -f example || true
+
+  latest-tag:
+    desc: Show latest git tag
+    silent: true
+    cmds:
+      - git describe --tags `git rev-list --tags --max-count=1`
+
+  delete-crds:
+    desc: Delete CRDs
+    silent: true
+    cmds:
+      - kubectl delete crd litellmkeys.ops.veitosiander.de || true
+      - kubectl delete crd litellmmodels.ops.veitosiander.de || true
+      - kubectl delete crd ollamamodels.ops.veitosiander.de || true
+
+  leaks:
+    desc: Try searching for commited secrets etc
+    cmds:
+      - trufflehog filesystem .
+      - gitleaks git -v
+
+  tag:
+    desc: git tag the current release
+    cmds:
+      - git tag $(svu next) || true
+      - git push origin $(svu current)
+
+  docker-test:
+    cmds:
+      - docker build -t litellm-operator:test .
+      - docker run --rm -p 8080:8080 litellm-operator:test

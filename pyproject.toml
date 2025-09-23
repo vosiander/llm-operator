@@ -1,0 +1,26 @@
+[project]
+name = "litellm-operator"
+version = "0.1.0"
+description = "Kubernetes operator for litellm"
+requires-python = ">=3.13"
+dependencies = [
+    "typer",
+    "kopf",
+    "kr8s",
+    "kubecrd",
+    "apischema",
+    "kubernetes",
+    "requests",
+    "tenacity",
+    "pyyaml",
+    "asyncio",
+    "prometheus-client",
+    "loguru",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-mock",
+    "black",
+    "isort",
+    "mypy",
+    "injector",
+]
