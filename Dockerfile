@@ -15,6 +15,11 @@ ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt \
     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
     SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
+# Install gosu and ca-certificates
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gosu ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
 # Create non-root user
 RUN groupadd -r genai && useradd -r -g genai -d /app -s /bin/bash genai
 

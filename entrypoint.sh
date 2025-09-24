@@ -23,8 +23,7 @@ copy_and_update_certs() {
 if [ "$(id -u)" = "0" ]; then
   copy_and_update_certs
   # Drop privileges to genai
-  exec su -s /bin/sh genai -c "exec \"$@\""
+  exec gosu genai "$@"
 else
   exec "$@"
 fi
-
