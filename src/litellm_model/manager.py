@@ -26,7 +26,7 @@ class ModelManagement:
                 headers={"Authorization": f"Bearer {litellm_api_key}"}
             )
             
-            logger.debug(f"Get model response: {response.status_code} - {response.text}")
+            logger.trace(f"Get model response: {response.status_code} - {response.text}")
             
             if response.status_code == 200:
                 return response.json()
@@ -49,7 +49,7 @@ class ModelManagement:
                 headers={"Authorization": f"Bearer {litellm_api_key}"}
             )
             
-            logger.debug(f"List models response: {response.status_code} - {response.text}")
+            logger.trace(f"List models response: {response.status_code} - {response.text}")
             
             if response.status_code == 200:
                 models_data = response.json()
@@ -82,14 +82,14 @@ class ModelManagement:
         model_data.pop('litellm_api_key', None)
 
         try:
-            logger.debug(f"Creating model with data: {json.dumps(model_data, indent=2)}")
+            logger.trace(f"Creating model with data: {json.dumps(model_data, indent=2)}")
             response = requests.post(
                 url=f"{litellm_host}/model/new",
                 headers={"Authorization": f"Bearer {litellm_api_key}"},
                 json=model_data
             )
             
-            logger.debug(f"Create model response: {response.status_code} - {response.text}")
+            logger.trace(f"Create model response: {response.status_code} - {response.text}")
             
             if response.status_code == 200:
                 logger.info(f"Successfully created model {model_data.get('model_name')}")
@@ -115,7 +115,7 @@ class ModelManagement:
                 json=dict(model_data)
             )
             
-            logger.debug(f"Update model response: {response.status_code} - {response.text}")
+            logger.trace(f"Update model response: {response.status_code} - {response.text}")
             
             if response.status_code == 200:
                 logger.info(f"Successfully updated model {model_id}")
@@ -138,7 +138,7 @@ class ModelManagement:
             logger.error(f"Model with name {model_name} has no ID, cannot delete.")
             raise LiteLLMModelException("Model has no ID, cannot delete.")
 
-        logger.debug(f"Deleting model {model_name} with ID {model["model_info"].get('id')} and data: {json.dumps(model, indent=2)}")
+        logger.info(f"Deleting model {model_name} with ID {model["model_info"].get('id')} and data: {json.dumps(model, indent=2)}")
         return self.delete_model(litellm_host, litellm_api_key, model["model_info"].get("id"))
 
     def delete_model(self, litellm_host, litellm_api_key, model_id: str) -> bool:
@@ -150,7 +150,7 @@ class ModelManagement:
                 json={"id": model_id}
             )
             
-            logger.debug(f"Delete model response: {response.status_code} - {response.text}")
+            logger.trace(f"Delete model response: {response.status_code} - {response.text}")
             
             if response.status_code == 200:
                 logger.info(f"Successfully deleted model {model_id}")

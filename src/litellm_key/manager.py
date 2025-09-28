@@ -17,7 +17,7 @@ class KeyManagement:
             headers={"Authorization": f"Bearer {litellm_api_key}"}
         )
 
-        logger.debug(f"Response from LiteLLM: {rsp.status_code} - {rsp.text}")
+        logger.trace(f"Response from LiteLLM: {rsp.status_code} - {rsp.text}")
         rsp_json = rsp.json()
         if rsp.status_code == 200 and "keys" in rsp_json and len(rsp_json["keys"]) > 0:
             return rsp_json["keys"][0]
@@ -54,10 +54,10 @@ class KeyManagement:
                 "models": models
             }
         )
-        logger.debug(f"Response from LiteLLM: {rsp.status_code} - {rsp.text}")
+        logger.trace(f"Response from LiteLLM: {rsp.status_code} - {rsp.text}")
 
         rsp_json = rsp.json()
-        logger.debug(f"Response JSON: {rsp_json}")
+        logger.trace(f"Response JSON: {rsp_json}")
         if rsp.status_code != 200:
             logger.error(f"Failed to generate key: {rsp.status_code} - {rsp.text}")
             raise ValueError(f"Failed to generate key: {rsp.status_code} - {rsp.text}")

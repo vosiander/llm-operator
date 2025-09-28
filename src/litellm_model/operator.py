@@ -71,7 +71,7 @@ def create_fn(spec, name, namespace,**kwargs):
 
         logger.info(f"Creating new model {spec['model_name']}...")
         model = model_management.create_model(spec['litellm_host'], spec['litellm_api_key'], spec)
-        logger.info(f"Created model for {namespace}/{name} with {model.get("model_name", "no-model-name")}, updating CRD...")
+        logger.info(f"Created model for {namespace}/{name} with {model.get('model_name', 'no-model-name')}, updating CRD...")
         cr.patch({"spec": {"is_installed": True}})
 
         logger.info(f"LiteLLMModel {namespace}/{name} created successfully.")

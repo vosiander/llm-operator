@@ -66,7 +66,7 @@ def create_fn(spec, name, namespace,**kwargs):
     try:
         key = litellm_key_management.get_key_by_alias(spec["litellm_host"], spec["litellm_api_key"], spec['key_alias'])
         if key is not None:
-            logger.warning(f"Key with for host {spec["litellm_host"]} alias {spec['key_alias']} already exists for user {spec['user_id']}. Deleting key...")
+            logger.warning(f"Key with for host {spec['litellm_host']} alias {spec['key_alias']} already exists for user {spec['user_id']}. Deleting key...")
             litellm_key_management.delete_key(spec["litellm_host"], spec["litellm_api_key"], spec['key_alias'])
 
         logger.info(f"Generating new key for user {spec['user_id']} with alias {spec['key_alias']}...")

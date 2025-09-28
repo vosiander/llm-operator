@@ -24,7 +24,7 @@ class KubeModule(Module):
         except ConfigException:
             pass
 
-        logger.debug(f"Loading kubeconfig from {os.getenv('KUBECONFIG')}")
+        logger.trace(f"Loading kubeconfig from {os.getenv('KUBECONFIG')}")
         config.load_kube_config(os.getenv("KUBECONFIG"))
 
         return client.ApiClient()
