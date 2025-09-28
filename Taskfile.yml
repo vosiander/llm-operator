@@ -8,10 +8,23 @@ vars:
 dotenv: [.env]
 
 tasks:
+  bootup:
+    desc: Boot up the operator in local k0s cluster
+    silent: true
+    cmds:
+      - docker-compose -f {{.CURRENT_DIR}}/docker-compose.yaml up -d
+      - echo "n8n ready in http://localhost:5678"
+
+  teardown:
+    desc: Tear down the operator and k0s cluster
+    silent: true
+    cmds:
+      - docker-compose -f {{.CURRENT_DIR}}/docker-compose.yaml down -v
+
   run:
     desc: Run llm-operator
     env:
-      LLM_OPERATOR_PLUGINS: "n8n_api_key"
+      LLM_OPERATOR_PLUGINS: "n8n_admin_user"
     cmds:
       - uv run kopf run main.py --all-namespaces --liveness http://0.0.0.0:8080/healthz --standalone
 
