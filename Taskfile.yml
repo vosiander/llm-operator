@@ -23,8 +23,6 @@ tasks:
 
   run:
     desc: Run llm-operator
-    env:
-      LLM_OPERATOR_PLUGINS: "n8n_admin_user"
     cmds:
       - uv run kopf run main.py --all-namespaces --liveness http://0.0.0.0:8080/healthz --standalone
 

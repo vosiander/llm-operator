@@ -7,16 +7,22 @@ import importlib
 
 injector = Injector([KubeModule()])
 
+default_plugins = [
+    "litellm_key",
+    "litellm_model",
+    "n8n_admin_user",
+    "n8n_api_key",
+    "ollama_model",
+]
+
 @kopf.on.startup()
 def startup_fn(settings: kopf.OperatorSettings, **kwargs):
     logger.info("Starting llm-operator...")
     logger.debug(f"Operator Settings: {settings}")
 
-    # Load plugins dynamically based on LLM_OPERATOR_PLUGINS environment variable
     plugins_env = os.getenv("LLM_OPERATOR_PLUGINS", "")
     if not plugins_env:
-        logger.info("No plugins specified in LLM_OPERATOR_PLUGINS. No CRD handlers will be loaded.")
-        return
+        plugins_env = ",".join(default_plugins)
 
     plugins = [plugin.strip() for plugin in plugins_env.split(",") if plugin.strip()]
     
