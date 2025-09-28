@@ -11,7 +11,7 @@ tasks:
   run:
     desc: Run llm-operator
     env:
-      LLM_OPERATOR_PLUGINS: "litellm_key,litellm_model,ollama_model"
+      LLM_OPERATOR_PLUGINS: "n8n_api_key"
     cmds:
       - uv run kopf run main.py --all-namespaces --liveness http://0.0.0.0:8080/healthz --standalone
 
@@ -21,13 +21,30 @@ tasks:
     cmds:
       - git describe --tags `git rev-list --tags --max-count=1`
 
-  delete-crds:
+  crd-cleanup:
     desc: Delete CRDs
     silent: true
     cmds:
+      - kubectl patch crd litellmkeys.ops.veitosiander.de -p '{"metadata":{"finalizers":[]}}' --type=merge || true
+      - kubectl patch crd litellmmodels.ops.veitosiander.de -p '{"metadata":{"finalizers":[]}}' --type=merge || true
+      - kubectl patch crd ollamamodels.ops.veitosiander.de -p '{"metadata":{"finalizers":[]}}' --type=merge || true
+      - kubectl patch crd n8nadminusers.ops.veitosiander.de -p '{"metadata":{"finalizers":[]}}' --type=merge || true
+      - kubectl patch crd n8napikeys.ops.veitosiander.de -p '{"metadata":{"finalizers":[]}}' --type=merge || true
+      - kubectl patch litellmkey --all -p '{"metadata":{"finalizers":[]}}' --type=merge || true
+      - kubectl patch litellmmodel --all -p '{"metadata":{"finalizers":[]}}' --type=merge || true
+      - kubectl patch ollamamodel --all -p '{"metadata":{"finalizers":[]}}' --type=merge || true
+      - kubectl patch n8nadminuser --all -p '{"metadata":{"finalizers":[]}}' --type=merge || true
+      - kubectl patch n8napikey --all -p '{"metadata":{"finalizers":[]}}' --type=merge || true
+      - kubectl delete litellmkey --all || true
+      - kubectl delete litellmmodel --all || true
+      - kubectl delete ollamamodel --all || true
+      - kubectl delete n8nadminuser --all || true
+      - kubectl delete n8napikey --all || true
       - kubectl delete crd litellmkeys.ops.veitosiander.de || true
       - kubectl delete crd litellmmodels.ops.veitosiander.de || true
       - kubectl delete crd ollamamodels.ops.veitosiander.de || true
+      - kubectl delete crd n8nadminusers.ops.veitosiander.de || true
+      - kubectl delete crd n8napikeys.ops.veitosiander.de || true
 
   leaks:
     desc: Try searching for commited secrets etc
