@@ -104,6 +104,43 @@ spec:
   tag: "Q8_0"
 ```
 
+### Managing n8n Admin Users
+
+Creates admin users in n8n instances for workflow automation platform management.
+
+```yaml
+apiVersion: ops.veitosiander.de/v1
+kind: N8nAdminUser
+metadata:
+  name: n8n-admin-user-example
+  namespace: default
+spec:
+  n8n_domain: "https://n8n.example.com"
+  email: "admin@example.com"
+  password: "SecurePassword123!"
+  first_name: "Admin"
+  last_name: "User"
+```
+
+### Managing n8n API Keys
+
+Creates API keys for n8n workflow automation and stores them as Kubernetes secrets.
+
+```yaml
+apiVersion: ops.veitosiander.de/v1
+kind: N8nApiKey
+metadata:
+  name: n8n-api-key-example
+  namespace: default
+spec:
+  n8n_domain: "https://n8n.example.com"
+  email: "admin@example.com"
+  password: "SecurePassword123!"
+  api_key_name: "workflow-automation-key"
+  secret_name: "n8n-api-secret"
+  secret_namespace: "default"
+```
+
 ## Configuration
 
 ### LiteLLMKey Spec
@@ -121,6 +158,29 @@ spec:
 - `model_name`: Internal model identifier
 - `litellm_params`: Provider-specific model configuration
 - `model_info`: Additional model metadata
+
+### OllamaModel Spec
+
+- `ollama_host`: Ollama server endpoint
+- `model`: Model identifier (e.g., huggingface repository)
+- `tag`: Model tag/variant to pull
+
+### N8nAdminUser Spec
+
+- `n8n_domain`: n8n instance URL
+- `email`: Admin user email address
+- `password`: Admin user password
+- `first_name`: Admin user first name
+- `last_name`: Admin user last name
+
+### N8nApiKey Spec
+
+- `n8n_domain`: n8n instance URL
+- `email`: User email for authentication
+- `password`: User password for authentication
+- `api_key_name`: Name for the generated API key
+- `secret_name`: Kubernetes secret name to store the API key
+- `secret_namespace`: Kubernetes namespace for the secret
 
 ## Development
 
