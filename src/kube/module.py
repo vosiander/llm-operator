@@ -17,14 +17,17 @@ class KubeModule(Module):
     def get_kube_client(self) -> ApiClient:
         """Get a Kubernetes API client."""
         logger.debug("Loading Kubernetes configuration")
-        try:
-            logger.debug("Loading in-cluster Kubernetes configuration")
-            config.load_incluster_config()
-            return client.ApiClient()
-        except ConfigException:
-            pass
 
-        logger.trace(f"Loading kubeconfig from {os.getenv('KUBECONFIG')}")
+        if os.getenv("KUBERNETES_SERVICE_HOST") and os.getenv("KUBERNETES_SERVICE_PORT"):
+            logger.debug("Detected in-cluster environment variables")
+            try:
+                logger.debug("Loading in-cluster Kubernetes configuration")
+                config.load_incluster_config()
+                return client.ApiClient()
+            except ConfigException:
+                pass
+
+        logger.debug(f"Loading kubeconfig from {os.getenv('KUBECONFIG')}")
         config.load_kube_config(os.getenv("KUBECONFIG"))
 
         return client.ApiClient()
