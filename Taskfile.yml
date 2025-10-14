@@ -45,6 +45,9 @@ tasks:
         n8napikeys:n8napikey
         openwebuibanners:openwebuibanner
         openwebuichannels:openwebuichannel
+        openwebuigroups:openwebuigroup
+        openwebuiprompts:openwebuiprompt
+        openwebuitoolservers:openwebuitoolserver
       CRD_DOMAIN: ops.veitosiander.de
       PATCH_FINALIZERS: '{"metadata":{"finalizers":[]}}'
     cmds:

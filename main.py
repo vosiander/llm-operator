@@ -2,10 +2,11 @@ from injector import Injector
 from loguru import logger
 import kopf
 from src.kube.module import KubeModule
+from src.lock_manager import LockModule
 import os
 import importlib
 
-injector = Injector([KubeModule()])
+injector = Injector([KubeModule(), LockModule()])
 
 default_plugins = [
     "litellm_key",
@@ -15,6 +16,9 @@ default_plugins = [
     "ollama_model",
     "openwebui_banner",
     "openwebui_channel",
+    "openwebui_group",
+    "openwebui_prompt",
+    "openwebui_tool_server",
 ]
 
 @kopf.on.startup()

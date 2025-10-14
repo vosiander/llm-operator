@@ -16,7 +16,7 @@ class OpenWebUIChannelMeta(kubecrd.KubeResourceBase):
 @dataclass
 class OpenWebUIChannelAccessControl(kubecrd.KubeResourceBase):
     read: list[str] = field(default_factory=lambda: ["admin", "user"])
-    write: bool = field(default_factory=lambda: ["admin", "user"])
+    write: list[str] = field(default_factory=lambda: ["admin", "user"])
 
 @dataclass
 class OpenWebUIChannel(kubecrd.KubeResourceBase):
