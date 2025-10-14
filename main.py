@@ -14,6 +14,7 @@ default_plugins = [
     "n8n_api_key",
     "ollama_model",
     "openwebui_banner",
+    "openwebui_channel",
 ]
 
 @kopf.on.startup()

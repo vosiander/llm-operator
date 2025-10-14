@@ -33,30 +33,52 @@ tasks:
       - git describe --tags `git rev-list --tags --max-count=1`
 
   crd-cleanup:
-    desc: Delete CRDs
+    desc: Delete CRDs and their resources
     silent: true
+    vars:
+      # CRDs with corresponding resource types
+      CRDS: >-
+        litellmkeys:litellmkey
+        litellmmodels:litellmmodel
+        ollamamodels:ollamamodel
+        n8nadminusers:n8nadminuser
+        n8napikeys:n8napikey
+        openwebuibanners:openwebuibanner
+        openwebuichannels:openwebuichannel
+      CRD_DOMAIN: ops.veitosiander.de
+      PATCH_FINALIZERS: '{"metadata":{"finalizers":[]}}'
     cmds:
-      - kubectl patch crd litellmkeys.ops.veitosiander.de -p '{"metadata":{"finalizers":[]}}' --type=merge || true
-      - kubectl patch crd litellmmodels.ops.veitosiander.de -p '{"metadata":{"finalizers":[]}}' --type=merge || true
-      - kubectl patch crd ollamamodels.ops.veitosiander.de -p '{"metadata":{"finalizers":[]}}' --type=merge || true
-      - kubectl patch crd n8nadminusers.ops.veitosiander.de -p '{"metadata":{"finalizers":[]}}' --type=merge || true
-      - kubectl patch crd n8napikeys.ops.veitosiander.de -p '{"metadata":{"finalizers":[]}}' --type=merge || true
-      - kubectl patch litellmkey --all -p '{"metadata":{"finalizers":[]}}' --type=merge || true
-      - kubectl patch litellmmodel --all -p '{"metadata":{"finalizers":[]}}' --type=merge || true
-      - kubectl patch ollamamodel --all -p '{"metadata":{"finalizers":[]}}' --type=merge || true
-      - kubectl patch n8nadminuser --all -p '{"metadata":{"finalizers":[]}}' --type=merge || true
-      - kubectl patch n8napikey --all -p '{"metadata":{"finalizers":[]}}' --type=merge || true
-      - kubectl delete litellmkey --all || true
-      - kubectl delete litellmmodel --all || true
-      - kubectl delete ollamamodel --all || true
-      - kubectl delete n8nadminuser --all || true
-      - kubectl delete n8napikey --all || true
-      - kubectl delete crd litellmkeys.ops.veitosiander.de || true
-      - kubectl delete crd litellmmodels.ops.veitosiander.de || true
-      - kubectl delete crd ollamamodels.ops.veitosiander.de || true
-      - kubectl delete crd n8nadminusers.ops.veitosiander.de || true
-      - kubectl delete crd n8napikeys.ops.veitosiander.de || true
-      - kubectl delete crd openwebuibanner.ops.veitosiander.de || true
+      # Patch CRD finalizers
+      - |
+        for crd_pair in {{.CRDS}}; do
+          crd_name="${crd_pair%%:*}"
+          echo "Patching CRD ${crd_name}.{{.CRD_DOMAIN}}..."
+          kubectl patch crd "${crd_name}.{{.CRD_DOMAIN}}" \
+            -p '{{.PATCH_FINALIZERS}}' --type=merge 2>/dev/null || true
+        done
+      # Patch resource instance finalizers
+      - |
+        for crd_pair in {{.CRDS}}; do
+          resource_type="${crd_pair##*:}"
+          echo "Patching all ${resource_type} resources..."
+          kubectl patch "${resource_type}" --all \
+            -p '{{.PATCH_FINALIZERS}}' --type=merge 2>/dev/null || true
+        done
+      # Delete all resource instances
+      - |
+        for crd_pair in {{.CRDS}}; do
+          resource_type="${crd_pair##*:}"
+          echo "Deleting all ${resource_type} resources..."
+          kubectl delete "${resource_type}" --all --wait=false 2>/dev/null || true
+        done
+      # Delete CRDs with resources
+      - |
+        for crd_pair in {{.CRDS}}; do
+          crd_name="${crd_pair%%:*}"
+          echo "Deleting CRD ${crd_name}.{{.CRD_DOMAIN}}..."
+          kubectl delete crd "${crd_name}.{{.CRD_DOMAIN}}" --wait=false 2>/dev/null || true
+        done
+      - echo "CRD cleanup completed."
 
   leaks:
     desc: Try searching for commited secrets etc
