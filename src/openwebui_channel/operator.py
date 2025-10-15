@@ -21,8 +21,10 @@ def register_handlers(inj: Injector):
 
 @kopf.on.timer("ops.veitosiander.de", "v1", "OpenWebUIChannel", interval=30)
 def timer_fn(spec, name, namespace, **kwargs):
-    if not spec.get('is_installed', False):
-        logger.warning(f"channel not installed for {namespace}/{name}, skipping reconciliation.")
+    api_key = spec.get('openwebui_api_key', '').strip()
+    
+    if not api_key:
+        logger.debug(f"No API key for {namespace}/{name}, skipping reconciliation.")
         return
 
     logger.info("Pinging Open-WebUI service...")
@@ -36,26 +38,28 @@ def timer_fn(spec, name, namespace, **kwargs):
 
     logger.info(f"Fetched CR: {cr} <- {name}")
     
-    # Check by ID first, fall back to name
-    channel = None
-    if spec.get('channel_id'):
-        channel = channel_management.get_channel_by_id(spec['openwebui_host'], spec['openwebui_api_key'], spec['channel_id'])
+    # Use upsert for idempotent create/update
+    channel = channel_management.upsert_channel(
+        spec['openwebui_host'],
+        spec['openwebui_api_key'],
+        spec,
+        spec.get('channel_id')
+    )
     
-    if channel is None:
-        channel = channel_management.get_channel_by_name(spec['openwebui_host'], spec['openwebui_api_key'], spec['name'])
-    
-    if channel is not None:
-        logger.info(f"Channel {spec['name']} exists. Nothing to do...")
-    else:
-        logger.warning(f"Channel {spec['name']} does not exist. Recreating...")
-        channel = channel_management.create_channel(spec['openwebui_host'], spec['openwebui_api_key'], spec)
-        if channel and channel.get('id'):
-            cr.patch({"spec": {"channel_id": channel['id']}})
-        logger.info(f"Recreated channel for {namespace}/{name}")
+    # Update channel_id if not set or changed
+    if channel and channel.get('id') and channel.get('id') != spec.get('channel_id'):
+        cr.patch({"spec": {"channel_id": channel['id']}})
+        logger.info(f"Updated channel_id for {namespace}/{name}")
 
 
 @kopf.on.delete("ops.veitosiander.de", "v1", "OpenWebUIChannel")
 def delete_fn(spec, name, namespace, **kwargs):
+    api_key = spec.get('openwebui_api_key', '').strip()
+    
+    if not api_key:
+        logger.info(f"No API key for {namespace}/{name}, nothing to delete.")
+        return
+    
     channel_management = injector.get(ChannelManagement)
 
     logger.info(f"Deleting OpenWebUIChannel resource: {namespace}/{name} with spec: {spec}")
@@ -71,36 +75,40 @@ def delete_fn(spec, name, namespace, **kwargs):
 
 
 @kopf.on.create("ops.veitosiander.de", "v1", "OpenWebUIChannel")
-def create_fn(spec, name, namespace, **kwargs):
+@kopf.on.update("ops.veitosiander.de", "v1", "OpenWebUIChannel")
+def upsert_fn(spec, name, namespace, **kwargs):
+    api_key = spec.get('openwebui_api_key', '').strip()
+    
+    if not api_key:
+        logger.info(f"No API key for {namespace}/{name}, skipping upsert.")
+        return {"status": "waiting_for_api_key"}
+    
     channel_management = injector.get(ChannelManagement)
-
-    logger.info(f"Creating OpenWebUIChannel resource: {namespace}/{name} with spec: {spec}")
-
-    cr = list(kr8s.get("OpenWebUIChannel.ops.veitosiander.de", name, namespace=namespace))[0]
-    logger.info(f"Fetched CR: {cr}")
-
+    
+    logger.info(f"Upserting OpenWebUIChannel resource: {namespace}/{name}")
+    
     try:
-        channel = channel_management.get_channel_by_name(spec['openwebui_host'], spec['openwebui_api_key'], spec['name'])
-        if channel is not None:
-            logger.warning(f"Channel with name {spec['name']} already exists. Skipping...")
-            # Store the channel ID even if it already exists
-            if channel.get('id'):
-                cr.patch({"spec": {"channel_id": channel['id'], "is_installed": True}})
-            return {"status": "created"}
-
-        logger.info(f"Creating new channel {spec['name']}...")
-        channel = channel_management.create_channel(spec['openwebui_host'], spec['openwebui_api_key'], spec)
-        logger.info(f"Created channel for {namespace}/{name} with name {channel.get('name', 'no-name')}, updating CRD...")
+        channel = channel_management.upsert_channel(
+            spec['openwebui_host'],
+            spec['openwebui_api_key'],
+            spec,
+            spec.get('channel_id')
+        )
         
-        # Store the channel ID
-        patch_data = {"spec": {"is_installed": True}}
-        if channel.get('id'):
-            patch_data["spec"]["channel_id"] = channel['id']
-        cr.patch(patch_data)
-
-        logger.info(f"OpenWebUIChannel {namespace}/{name} created successfully.")
+        # Update is_installed and channel_id if needed
+        patch_data = {}
+        if not spec.get('is_installed', False):
+            patch_data["is_installed"] = True
+        if channel and channel.get('id') and channel.get('id') != spec.get('channel_id'):
+            patch_data["channel_id"] = channel['id']
+        
+        if patch_data:
+            cr = list(kr8s.get("OpenWebUIChannel.ops.veitosiander.de", name, namespace=namespace))[0]
+            cr.patch({"spec": patch_data})
+            logger.info(f"Updated CRD for {namespace}/{name}: {patch_data}")
+        
+        logger.info(f"OpenWebUIChannel {namespace}/{name} upserted successfully.")
+        return {"status": "upserted"}
     except Exception as e:
-        logger.error(f"Failed to create channel for {namespace}/{name}: {e}")
-        raise kopf.TemporaryError(f"Failed to create channel: {e}", delay=30)
-
-    return {"status": "created"}
+        logger.error(f"Failed to upsert channel for {namespace}/{name}: {e}")
+        raise kopf.TemporaryError(f"Failed to upsert channel: {e}", delay=30)

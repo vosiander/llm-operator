@@ -24,7 +24,6 @@ class OpenWebUIChannel(kubecrd.KubeResourceBase):
     __version__ = "v1"
 
     openwebui_host: str
-    openwebui_api_key: str
 
     # Channel configuration
     name: str
@@ -36,4 +35,5 @@ class OpenWebUIChannel(kubecrd.KubeResourceBase):
 
     # Auto-populated fields
     channel_id: str = field(default="")
+    openwebui_api_key: str = field(default="", metadata={"description": "Optional: API key for authentication. If not provided, the operator will attempt to use other authentication methods"})
     is_installed: bool = field(default=False, metadata={"description": "Indicates if the channel is installed."})

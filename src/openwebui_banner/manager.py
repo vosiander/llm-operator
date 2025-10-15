@@ -145,6 +145,22 @@ class BannerManagement:
             logger.error(f"Exception while updating banner {banner_id}: {e}")
             raise
 
+    def upsert_banner(self, openwebui_host: str, openwebui_api_key: str, banner_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create or update a banner idempotently."""
+        banner_id = banner_data.get('id')
+        if not banner_id:
+            raise OpenWebUIBannerException("Banner ID is required for upsert")
+        
+        # Check if banner exists
+        existing = self.get_banner_by_id(openwebui_host, openwebui_api_key, banner_id)
+        if existing:
+            logger.info(f"Banner with ID {banner_id} exists, updating...")
+            return self.update_banner(openwebui_host, openwebui_api_key, banner_id, banner_data)
+        
+        # Create new
+        logger.info(f"Banner does not exist, creating new banner...")
+        return self.create_banner(openwebui_host, openwebui_api_key, banner_data)
+
     def delete_banner(self, openwebui_host: str, openwebui_api_key: str, banner_id: str) -> bool:
         """Delete a banner by ID."""
         try:

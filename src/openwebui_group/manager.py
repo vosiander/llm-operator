@@ -188,3 +188,36 @@ class GroupManagement:
 
         logger.info(f"Deleting group {name} with ID {group_id}")
         return self.delete_group(openwebui_host, openwebui_api_key, group_id)
+
+    def upsert_group(self, openwebui_host: str, openwebui_api_key: str, group_data: Dict[str, Any], group_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Upsert (create or update) a group.
+        Checks if the group exists by ID or name, then updates if found or creates if not.
+        
+        Args:
+            openwebui_host: The OpenWebUI host URL
+            openwebui_api_key: The API key for authentication
+            group_data: The group data to upsert
+            group_id: Optional group ID to check first
+            
+        Returns:
+            The created or updated group data
+        """
+        # Try by ID first if provided
+        if group_id:
+            existing = self.get_group_by_id(openwebui_host, openwebui_api_key, group_id)
+            if existing:
+                logger.info(f"Group with ID {group_id} exists, updating...")
+                return self.update_group(openwebui_host, openwebui_api_key, group_id, group_data)
+        
+        # Check by name
+        group_name = group_data.get('name')
+        if group_name:
+            existing = self.get_group_by_name(openwebui_host, openwebui_api_key, group_name)
+            if existing:
+                logger.info(f"Group with name {group_name} exists, updating...")
+                return self.update_group(openwebui_host, openwebui_api_key, existing['id'], group_data)
+        
+        # Create new group
+        logger.info(f"Group does not exist, creating new group...")
+        return self.create_group(openwebui_host, openwebui_api_key, group_data)

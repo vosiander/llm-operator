@@ -164,3 +164,31 @@ class PromptManagement:
         except Exception as e:
             logger.error(f"Exception while deleting prompt {command}: {e}")
             raise
+
+    def upsert_prompt(self, openwebui_host: str, openwebui_api_key: str, prompt_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Upsert (create or update) a prompt.
+        Checks if the prompt exists by command, then updates if found or creates if not.
+        
+        Args:
+            openwebui_host: The OpenWebUI host URL
+            openwebui_api_key: The API key for authentication
+            prompt_data: The prompt data to upsert
+            
+        Returns:
+            The created or updated prompt data
+        """
+        command = prompt_data.get('command')
+        if not command:
+            raise OpenWebUIPromptException("Command is required for prompt upsert")
+        
+        # Check if prompt exists
+        existing = self.get_prompt_by_command(openwebui_host, openwebui_api_key, command)
+        
+        if existing:
+            logger.info(f"Prompt with command {command} exists, updating...")
+            return self.update_prompt(openwebui_host, openwebui_api_key, command, prompt_data)
+        
+        # Create new prompt
+        logger.info(f"Prompt with command {command} does not exist, creating...")
+        return self.create_prompt(openwebui_host, openwebui_api_key, prompt_data)

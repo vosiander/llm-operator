@@ -15,11 +15,11 @@ class OpenWebUIPrompt(kubecrd.KubeResourceBase):
     __version__ = "v1"
 
     openwebui_host: str
-    openwebui_api_key: str
 
     # Prompt configuration
     command: str  # unique identifier
     title: str
     content: str
 
+    openwebui_api_key: str = field(default="", metadata={"description": "Optional: API key for authentication. If not provided, the operator will attempt to use other authentication methods"})
     is_installed: bool = field(default=False, metadata={"description": "Indicates if the prompt is installed."})

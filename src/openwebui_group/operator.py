@@ -21,8 +21,10 @@ def register_handlers(inj: Injector):
 
 @kopf.on.timer("ops.veitosiander.de", "v1", "OpenWebUIGroup", interval=30)
 def timer_fn(spec, name, namespace, **kwargs):
-    if not spec.get('is_installed', False):
-        logger.warning(f"group not installed for {namespace}/{name}, skipping reconciliation.")
+    api_key = spec.get('openwebui_api_key', '').strip()
+    
+    if not api_key:
+        logger.debug(f"No API key for {namespace}/{name}, skipping reconciliation.")
         return
 
     logger.info("Pinging Open-WebUI service...")
@@ -35,27 +37,23 @@ def timer_fn(spec, name, namespace, **kwargs):
     cr = list(kr8s.get("OpenWebUIGroup.ops.veitosiander.de", name, namespace=namespace))[0]
 
     logger.info(f"Fetched CR: {cr} <- {name}")
+    group = group_management.upsert_group(spec['openwebui_host'], spec['openwebui_api_key'], spec, spec.get('group_id'))
     
-    # Check by ID first, fall back to name
-    group = None
-    if spec.get('group_id'):
-        group = group_management.get_group_by_id(spec['openwebui_host'], spec['openwebui_api_key'], spec['group_id'])
+    # Update group_id if it changed
+    if group and group.get('id') and group['id'] != spec.get('group_id'):
+        cr.patch({"spec": {"group_id": group['id']}})
     
-    if group is None:
-        group = group_management.get_group_by_name(spec['openwebui_host'], spec['openwebui_api_key'], spec['name'])
-    
-    if group is not None:
-        logger.info(f"Group {spec['name']} exists. Nothing to do...")
-    else:
-        logger.warning(f"Group {spec['name']} does not exist. Recreating...")
-        group = group_management.create_group(spec['openwebui_host'], spec['openwebui_api_key'], spec)
-        if group and group.get('id'):
-            cr.patch({"spec": {"group_id": group['id']}})
-        logger.info(f"Recreated group for {namespace}/{name}")
+    logger.info(f"Upserted group {spec['name']} for {namespace}/{name}")
 
 
 @kopf.on.delete("ops.veitosiander.de", "v1", "OpenWebUIGroup")
 def delete_fn(spec, name, namespace, **kwargs):
+    api_key = spec.get('openwebui_api_key', '').strip()
+    
+    if not api_key:
+        logger.info(f"No API key for {namespace}/{name}, nothing to delete.")
+        return
+    
     group_management = injector.get(GroupManagement)
 
     logger.info(f"Deleting OpenWebUIGroup resource: {namespace}/{name} with spec: {spec}")
@@ -71,36 +69,40 @@ def delete_fn(spec, name, namespace, **kwargs):
 
 
 @kopf.on.create("ops.veitosiander.de", "v1", "OpenWebUIGroup")
-def create_fn(spec, name, namespace, **kwargs):
+@kopf.on.update("ops.veitosiander.de", "v1", "OpenWebUIGroup")
+def upsert_fn(spec, name, namespace, **kwargs):
+    api_key = spec.get('openwebui_api_key', '').strip()
+    
+    if not api_key:
+        logger.info(f"No API key for {namespace}/{name}, skipping upsert.")
+        return {"status": "waiting_for_api_key"}
+    
     group_management = injector.get(GroupManagement)
-
-    logger.info(f"Creating OpenWebUIGroup resource: {namespace}/{name} with spec: {spec}")
-
-    cr = list(kr8s.get("OpenWebUIGroup.ops.veitosiander.de", name, namespace=namespace))[0]
-    logger.info(f"Fetched CR: {cr}")
-
+    
+    logger.info(f"Upserting OpenWebUIGroup resource: {namespace}/{name}")
+    
     try:
-        group = group_management.get_group_by_name(spec['openwebui_host'], spec['openwebui_api_key'], spec['name'])
-        if group is not None:
-            logger.warning(f"Group with name {spec['name']} already exists. Skipping...")
-            # Store the group ID even if it already exists
-            if group.get('id'):
-                cr.patch({"spec": {"group_id": group['id'], "is_installed": True}})
-            return {"status": "created"}
-
-        logger.info(f"Creating new group {spec['name']}...")
-        group = group_management.create_group(spec['openwebui_host'], spec['openwebui_api_key'], spec)
-        logger.info(f"Created group for {namespace}/{name} with name {group.get('name', 'no-name')}, updating CRD...")
+        group = group_management.upsert_group(
+            spec['openwebui_host'],
+            spec['openwebui_api_key'],
+            spec,
+            spec.get('group_id')
+        )
         
-        # Store the group ID
-        patch_data = {"spec": {"is_installed": True}}
-        if group.get('id'):
-            patch_data["spec"]["group_id"] = group['id']
-        cr.patch(patch_data)
-
-        logger.info(f"OpenWebUIGroup {namespace}/{name} created successfully.")
+        # Update is_installed and group_id if needed
+        patch_data = {}
+        if not spec.get('is_installed', False):
+            patch_data["is_installed"] = True
+        if group and group.get('id') and group.get('id') != spec.get('group_id'):
+            patch_data["group_id"] = group['id']
+        
+        if patch_data:
+            cr = list(kr8s.get("OpenWebUIGroup.ops.veitosiander.de", name, namespace=namespace))[0]
+            cr.patch({"spec": patch_data})
+            logger.info(f"Updated CRD for {namespace}/{name}: {patch_data}")
+        
+        logger.info(f"OpenWebUIGroup {namespace}/{name} upserted successfully.")
+        return {"status": "upserted"}
     except Exception as e:
-        logger.error(f"Failed to create group for {namespace}/{name}: {e}")
-        raise kopf.TemporaryError(f"Failed to create group: {e}", delay=30)
-
-    return {"status": "created"}
+        logger.error(f"Failed to upsert group for {namespace}/{name}: {e}")
+        raise kopf.TemporaryError(f"Failed to upsert group: {e}", delay=30)

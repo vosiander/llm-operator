@@ -160,6 +160,28 @@ class ChannelManagement:
             logger.error(f"Exception while deleting channel {channel_id}: {e}")
             raise
 
+    def upsert_channel(self, openwebui_host: str, openwebui_api_key: str, channel_data: Dict[str, Any], channel_id: Optional[str] = None) -> Dict[str, Any]:
+        """Create or update a channel idempotently."""
+        # Try by ID first if provided
+        if channel_id:
+            existing = self.get_channel_by_id(openwebui_host, openwebui_api_key, channel_id)
+            if existing:
+                logger.info(f"Channel with ID {channel_id} exists, updating...")
+                return self.update_channel(openwebui_host, openwebui_api_key, channel_id, channel_data)
+        
+        # Check by name
+        channel_name = channel_data.get('name')
+        if channel_name:
+            existing = self.get_channel_by_name(openwebui_host, openwebui_api_key, channel_name)
+            if existing:
+                existing_id = existing.get('id')
+                logger.info(f"Channel with name {channel_name} exists (ID: {existing_id}), updating...")
+                return self.update_channel(openwebui_host, openwebui_api_key, existing_id, channel_data)
+        
+        # Create new
+        logger.info(f"Channel does not exist, creating new channel...")
+        return self.create_channel(openwebui_host, openwebui_api_key, channel_data)
+
     def delete_channel_by_name(self, openwebui_host: str, openwebui_api_key: str, name: str) -> bool:
         """Delete a channel by name."""
         channel = self.get_channel_by_name(openwebui_host, openwebui_api_key, name)

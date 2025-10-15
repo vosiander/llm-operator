@@ -40,12 +40,11 @@ class OpenWebUIToolServer(kubecrd.KubeResourceBase):
     __version__ = "v1"
 
     openwebui_host: str
-    openwebui_api_key: str
 
     # Tool server configuration matching API format
     url: str
     path: str
-    server_type: str = field(default="openapi")
+    type: str = field(default="openapi")
     auth_type: str = field(default="bearer")
     key: str = field(default="")
     spec: str = field(default="")
@@ -53,4 +52,5 @@ class OpenWebUIToolServer(kubecrd.KubeResourceBase):
     info: OpenWebUIToolServerInfo = field(default=None)
     config: OpenWebUIToolServerConfig = field(default=None)
 
+    openwebui_api_key: str = field(default="", metadata={"description": "Optional: API key for authentication. If not provided, the operator will attempt to use other authentication methods"})
     is_installed: bool = field(default=False, metadata={"description": "Indicates if the tool server is installed."})

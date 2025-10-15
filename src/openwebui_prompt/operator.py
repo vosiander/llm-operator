@@ -21,8 +21,10 @@ def register_handlers(inj: Injector):
 
 @kopf.on.timer("ops.veitosiander.de", "v1", "OpenWebUIPrompt", interval=30)
 def timer_fn(spec, name, namespace, **kwargs):
-    if not spec.get('is_installed', False):
-        logger.warning(f"prompt not installed for {namespace}/{name}, skipping reconciliation.")
+    api_key = spec.get('openwebui_api_key', '').strip()
+    
+    if not api_key:
+        logger.debug(f"No API key for {namespace}/{name}, skipping reconciliation.")
         return
 
     logger.info("Pinging Open-WebUI service...")
@@ -35,27 +37,18 @@ def timer_fn(spec, name, namespace, **kwargs):
     cr = list(kr8s.get("OpenWebUIPrompt.ops.veitosiander.de", name, namespace=namespace))[0]
 
     logger.info(f"Fetched CR: {cr} <- {name}")
-    prompt = prompt_management.get_prompt_by_command(spec['openwebui_host'], spec['openwebui_api_key'], spec['command'])
-    if prompt is not None:
-        logger.info(f"Prompt {spec['command']} exists. Nothing to do...")
-        return
-
-    logger.warning(f"Cannot confirm prompt {spec['command']} status. Trying update first...")
-    try:
-        prompt_management.update_prompt(spec['openwebui_host'], spec['openwebui_api_key'], spec['command'], spec)
-        logger.info(f"Successfully updated existing prompt {spec['command']}")
-    except Exception as update_error:
-        logger.info(f"Update failed, prompt likely doesn't exist (error: {update_error}). Creating prompt {spec['command']}...")
-        try:
-            prompt_management.create_prompt(spec['openwebui_host'], spec['openwebui_api_key'], spec)
-            logger.info(f"Successfully created prompt for {namespace}/{name}")
-        except Exception as create_error:
-            logger.error(f"Failed to create prompt after update failed: {create_error}")
-            raise kopf.TemporaryError(f"Failed to create prompt: {create_error}", delay=30)
+    prompt = prompt_management.upsert_prompt(spec['openwebui_host'], spec['openwebui_api_key'], spec)
+    logger.info(f"Upserted prompt {spec['command']} for {namespace}/{name}")
 
 
 @kopf.on.delete("ops.veitosiander.de", "v1", "OpenWebUIPrompt")
 def delete_fn(spec, name, namespace, **kwargs):
+    api_key = spec.get('openwebui_api_key', '').strip()
+    
+    if not api_key:
+        logger.info(f"No API key for {namespace}/{name}, nothing to delete.")
+        return
+    
     prompt_management = injector.get(PromptManagement)
 
     logger.info(f"Deleting OpenWebUIPrompt resource: {namespace}/{name} with spec: {spec}")
@@ -68,28 +61,32 @@ def delete_fn(spec, name, namespace, **kwargs):
 
 
 @kopf.on.create("ops.veitosiander.de", "v1", "OpenWebUIPrompt")
-def create_fn(spec, name, namespace, **kwargs):
+@kopf.on.update("ops.veitosiander.de", "v1", "OpenWebUIPrompt")
+def upsert_fn(spec, name, namespace, **kwargs):
+    api_key = spec.get('openwebui_api_key', '').strip()
+    
+    if not api_key:
+        logger.info(f"No API key for {namespace}/{name}, skipping upsert.")
+        return {"status": "waiting_for_api_key"}
+    
     prompt_management = injector.get(PromptManagement)
-
-    logger.info(f"Creating OpenWebUIPrompt resource: {namespace}/{name} with spec: {spec}")
-
-    cr = list(kr8s.get("OpenWebUIPrompt.ops.veitosiander.de", name, namespace=namespace))[0]
-    logger.info(f"Fetched CR: {cr}")
-
+    
+    logger.info(f"Upserting OpenWebUIPrompt resource: {namespace}/{name}")
+    
     try:
-        prompt = prompt_management.get_prompt_by_command(spec['openwebui_host'], spec['openwebui_api_key'], spec['command'])
-        if prompt is not None:
-            logger.warning(f"Prompt with command {spec['command']} already exists. Skipping...")
-            return {"status": "created"}
-
-        logger.info(f"Creating new prompt {spec['command']}...")
-        prompt = prompt_management.create_prompt(spec['openwebui_host'], spec['openwebui_api_key'], spec)
-        logger.info(f"Created prompt for {namespace}/{name} with command {prompt.get('command', 'no-command')}, updating CRD...")
-        cr.patch({"spec": {"is_installed": True}})
-
-        logger.info(f"OpenWebUIPrompt {namespace}/{name} created successfully.")
+        prompt = prompt_management.upsert_prompt(
+            spec['openwebui_host'],
+            spec['openwebui_api_key'],
+            spec
+        )
+        
+        # Update is_installed flag if needed
+        if not spec.get('is_installed', False):
+            cr = list(kr8s.get("OpenWebUIPrompt.ops.veitosiander.de", name, namespace=namespace))[0]
+            cr.patch({"spec": {"is_installed": True}})
+        
+        logger.info(f"OpenWebUIPrompt {namespace}/{name} upserted successfully.")
+        return {"status": "upserted"}
     except Exception as e:
-        logger.error(f"Failed to create prompt for {namespace}/{name}: {e}")
-        raise kopf.TemporaryError(f"Failed to create prompt: {e}", delay=30)
-
-    return {"status": "created"}
+        logger.error(f"Failed to upsert prompt for {namespace}/{name}: {e}")
+        raise kopf.TemporaryError(f"Failed to upsert prompt: {e}", delay=30)

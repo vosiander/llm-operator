@@ -66,10 +66,6 @@ class ToolServerManagement:
         server_data.pop('openwebui_host', None)
         server_data.pop('openwebui_api_key', None)
         server_data.pop('is_installed', None)
-        
-        # Map CRD field name to API field name
-        if 'server_type' in server_data:
-            server_data['type'] = server_data.pop('server_type')
 
         # Use lock to prevent race conditions when multiple servers are created concurrently
         lock_key = f"tool_servers:{openwebui_host}"
@@ -122,10 +118,6 @@ class ToolServerManagement:
         server_data.pop('openwebui_host', None)
         server_data.pop('openwebui_api_key', None)
         server_data.pop('is_installed', None)
-        
-        # Map CRD field name to API field name
-        if 'server_type' in server_data:
-            server_data['type'] = server_data.pop('server_type')
         
         # Use lock to prevent race conditions
         lock_key = f"tool_servers:{openwebui_host}"
@@ -213,3 +205,31 @@ class ToolServerManagement:
             except Exception as e:
                 logger.error(f"Exception while deleting tool server {url}: {e}")
                 raise
+
+    def upsert_tool_server(self, openwebui_host: str, openwebui_api_key: str, server_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Upsert (create or update) a tool server.
+        Checks if the tool server exists by URL, then updates if found or creates if not.
+        
+        Args:
+            openwebui_host: The OpenWebUI host URL
+            openwebui_api_key: The API key for authentication
+            server_data: The tool server data to upsert
+            
+        Returns:
+            The created or updated tool server data
+        """
+        url = server_data.get('url')
+        if not url:
+            raise OpenWebUIToolServerException("URL is required for tool server upsert")
+        
+        # Check if tool server exists
+        existing = self.get_tool_server_by_url(openwebui_host, openwebui_api_key, url)
+        
+        if existing:
+            logger.info(f"Tool server with URL {url} exists, updating...")
+            return self.update_tool_server(openwebui_host, openwebui_api_key, url, server_data)
+        
+        # Create new tool server
+        logger.info(f"Tool server with URL {url} does not exist, creating...")
+        return self.create_tool_server(openwebui_host, openwebui_api_key, server_data)
