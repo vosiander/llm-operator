@@ -19,28 +19,6 @@ def register_handlers(inj: Injector):
     OpenWebUIPrompt.install(api, exist_ok=True)
 
 
-@kopf.on.timer("ops.veitosiander.de", "v1", "OpenWebUIPrompt", interval=30)
-def timer_fn(spec, name, namespace, **kwargs):
-    api_key = spec.get('openwebui_api_key', '').strip()
-    
-    if not api_key:
-        logger.debug(f"No API key for {namespace}/{name}, skipping reconciliation.")
-        return
-
-    logger.info("Pinging Open-WebUI service...")
-    prompt_management = injector.get(PromptManagement)
-    if not prompt_management.ping(spec['openwebui_host']):
-        logger.error("Failed to ping Open-WebUI service. Will retry in the next interval.")
-        return
-
-    logger.info(f"Reconciling OpenWebUIPrompt resource: {namespace}/{name} with spec: {spec}")
-    cr = list(kr8s.get("OpenWebUIPrompt.ops.veitosiander.de", name, namespace=namespace))[0]
-
-    logger.info(f"Fetched CR: {cr} <- {name}")
-    prompt = prompt_management.upsert_prompt(spec['openwebui_host'], spec['openwebui_api_key'], spec)
-    logger.info(f"Upserted prompt {spec['command']} for {namespace}/{name}")
-
-
 @kopf.on.delete("ops.veitosiander.de", "v1", "OpenWebUIPrompt")
 def delete_fn(spec, name, namespace, **kwargs):
     api_key = spec.get('openwebui_api_key', '').strip()

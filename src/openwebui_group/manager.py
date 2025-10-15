@@ -23,6 +23,66 @@ class GroupManagement:
             logger.error(f"Failed to ping Open-WebUI at {openwebui_host}: {e}")
             return False
 
+    def get_all_users(self, openwebui_host: str, openwebui_api_key: str) -> List[Dict[str, Any]]:
+        """Get all users from OpenWebUI."""
+        try:
+            response = requests.get(
+                url=f"{openwebui_host}/api/v1/users/all",
+                headers={"Authorization": f"Bearer {openwebui_api_key}"}
+            )
+            
+            logger.trace(f"Get all users response: {response.status_code} - {response.text}")
+            
+            if response.status_code == 200:
+                result = response.json()
+                users = result.get('users', [])
+                logger.info(f"Successfully fetched {len(users)} users from OpenWebUI")
+                return users
+            else:
+                logger.error(f"Failed to get users: {response.status_code} - {response.text}")
+                return []
+                
+        except Exception as e:
+            logger.error(f"Exception while getting users: {e}")
+            return []
+
+    def translate_emails_to_ids(self, openwebui_host: str, openwebui_api_key: str, user_emails: List[str]) -> List[str]:
+        """
+        Translate email addresses to user IDs.
+        
+        Args:
+            openwebui_host: The OpenWebUI host URL
+            openwebui_api_key: The API key for authentication
+            user_emails: List of email addresses to translate
+            
+        Returns:
+            List of user IDs corresponding to the provided emails
+        """
+        if not user_emails:
+            logger.info("No user emails provided, returning empty list")
+            return []
+        
+        # Fetch all users
+        users = self.get_all_users(openwebui_host, openwebui_api_key)
+        
+        if not users:
+            logger.warning("No users found in OpenWebUI, cannot translate emails to IDs")
+            return []
+        
+        # Create email-to-id mapping
+        email_to_id = {user.get('email'): user.get('id') for user in users if user.get('email') and user.get('id')}
+        
+        # Translate emails to IDs
+        user_ids = []
+        for email in user_emails:
+            if email in email_to_id:
+                user_ids.append(email_to_id[email])
+            else:
+                logger.warning(f"Email '{email}' not found in OpenWebUI user list")
+        
+        logger.info(f"Successfully translated {len(user_ids)}/{len(user_emails)} emails to user IDs")
+        return user_ids
+
     def get_groups(self, openwebui_host: str, openwebui_api_key: str) -> Optional[List[Dict[str, Any]]]:
         """Get all groups."""
         try:
@@ -203,6 +263,20 @@ class GroupManagement:
         Returns:
             The created or updated group data
         """
+        # Translate user emails to user IDs before upserting
+        user_emails = group_data.get('user_emails', [])
+        if user_emails:
+            user_ids = self.translate_emails_to_ids(openwebui_host, openwebui_api_key, user_emails)
+            # Replace user_emails with user_ids in the group data
+            group_data = dict(group_data)
+            group_data.pop('user_emails', None)
+            group_data['user_ids'] = user_ids
+        else:
+            # No emails provided, ensure user_ids is empty
+            group_data = dict(group_data)
+            group_data.pop('user_emails', None)
+            group_data['user_ids'] = []
+        
         # Try by ID first if provided
         if group_id:
             existing = self.get_group_by_id(openwebui_host, openwebui_api_key, group_id)

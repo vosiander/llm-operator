@@ -19,33 +19,6 @@ def register_handlers(inj: Injector):
     OpenWebUIGroup.install(api, exist_ok=True)
 
 
-@kopf.on.timer("ops.veitosiander.de", "v1", "OpenWebUIGroup", interval=30)
-def timer_fn(spec, name, namespace, **kwargs):
-    api_key = spec.get('openwebui_api_key', '').strip()
-    
-    if not api_key:
-        logger.debug(f"No API key for {namespace}/{name}, skipping reconciliation.")
-        return
-
-    logger.info("Pinging Open-WebUI service...")
-    group_management = injector.get(GroupManagement)
-    if not group_management.ping(spec['openwebui_host']):
-        logger.error("Failed to ping Open-WebUI service. Will retry in the next interval.")
-        return
-
-    logger.info(f"Reconciling OpenWebUIGroup resource: {namespace}/{name} with spec: {spec}")
-    cr = list(kr8s.get("OpenWebUIGroup.ops.veitosiander.de", name, namespace=namespace))[0]
-
-    logger.info(f"Fetched CR: {cr} <- {name}")
-    group = group_management.upsert_group(spec['openwebui_host'], spec['openwebui_api_key'], spec, spec.get('group_id'))
-    
-    # Update group_id if it changed
-    if group and group.get('id') and group['id'] != spec.get('group_id'):
-        cr.patch({"spec": {"group_id": group['id']}})
-    
-    logger.info(f"Upserted group {spec['name']} for {namespace}/{name}")
-
-
 @kopf.on.delete("ops.veitosiander.de", "v1", "OpenWebUIGroup")
 def delete_fn(spec, name, namespace, **kwargs):
     api_key = spec.get('openwebui_api_key', '').strip()

@@ -19,39 +19,6 @@ def register_handlers(inj: Injector):
     OpenWebUIChannel.install(api, exist_ok=True)
 
 
-@kopf.on.timer("ops.veitosiander.de", "v1", "OpenWebUIChannel", interval=30)
-def timer_fn(spec, name, namespace, **kwargs):
-    api_key = spec.get('openwebui_api_key', '').strip()
-    
-    if not api_key:
-        logger.debug(f"No API key for {namespace}/{name}, skipping reconciliation.")
-        return
-
-    logger.info("Pinging Open-WebUI service...")
-    channel_management = injector.get(ChannelManagement)
-    if not channel_management.ping(spec['openwebui_host']):
-        logger.error("Failed to ping Open-WebUI service. Will retry in the next interval.")
-        return
-
-    logger.info(f"Reconciling OpenWebUIChannel resource: {namespace}/{name} with spec: {spec}")
-    cr = list(kr8s.get("OpenWebUIChannel.ops.veitosiander.de", name, namespace=namespace))[0]
-
-    logger.info(f"Fetched CR: {cr} <- {name}")
-    
-    # Use upsert for idempotent create/update
-    channel = channel_management.upsert_channel(
-        spec['openwebui_host'],
-        spec['openwebui_api_key'],
-        spec,
-        spec.get('channel_id')
-    )
-    
-    # Update channel_id if not set or changed
-    if channel and channel.get('id') and channel.get('id') != spec.get('channel_id'):
-        cr.patch({"spec": {"channel_id": channel['id']}})
-        logger.info(f"Updated channel_id for {namespace}/{name}")
-
-
 @kopf.on.delete("ops.veitosiander.de", "v1", "OpenWebUIChannel")
 def delete_fn(spec, name, namespace, **kwargs):
     api_key = spec.get('openwebui_api_key', '').strip()

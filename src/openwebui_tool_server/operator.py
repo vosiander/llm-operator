@@ -20,28 +20,6 @@ def register_handlers(inj: Injector):
     OpenWebUIToolServer.install(api, exist_ok=True)
 
 
-@kopf.on.timer("ops.veitosiander.de", "v1", "OpenWebUIToolServer", interval=30)
-def timer_fn(spec, name, namespace, **kwargs):
-    api_key = spec.get('openwebui_api_key', '').strip()
-    
-    if not api_key:
-        logger.debug(f"No API key for {namespace}/{name}, skipping reconciliation.")
-        return
-
-    logger.info("Pinging Open-WebUI service...")
-    tool_server_management = injector.get(ToolServerManagement)
-    if not tool_server_management.ping(spec['openwebui_host']):
-        logger.error("Failed to ping Open-WebUI service. Will retry in the next interval.")
-        return
-
-    logger.info(f"Reconciling OpenWebUIToolServer resource: {namespace}/{name} with spec: {spec}")
-    cr = list(kr8s.get("OpenWebUIToolServer.ops.veitosiander.de", name, namespace=namespace))[0]
-
-    logger.info(f"Fetched CR: {cr} <- {name}")
-    server = tool_server_management.upsert_tool_server(spec['openwebui_host'], spec['openwebui_api_key'], spec)
-    logger.info(f"Upserted tool server {spec['url']} for {namespace}/{name}")
-
-
 @kopf.on.delete("ops.veitosiander.de", "v1", "OpenWebUIToolServer")
 def delete_fn(spec, name, namespace, **kwargs):
     api_key = spec.get('openwebui_api_key', '').strip()

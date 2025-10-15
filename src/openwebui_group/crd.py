@@ -34,7 +34,7 @@ class OpenWebUIGroup(kubecrd.KubeResourceBase):
     name: str
     description: str
     permissions: OpenWebUIGroupPermissions = field(default=None)
-    user_ids: List[str] = field(default_factory=list)
+    user_emails: List[str] = field(default_factory=list)
 
     # Auto-populated fields
     group_id: str = field(default="")
