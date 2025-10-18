@@ -12,4 +12,5 @@ class LiteLLMKey(kubecrd.KubeResourceBase):
     key_name: str
     key_alias: str
     user_id: str
+    team_id: str = field(default="", metadata={"description": "The ID of the team this key belongs to."})
     key_value: str = field(default="", metadata={"description": "The actual API key value."})

@@ -40,6 +40,7 @@ tasks:
       CRDS: >-
         litellmkeys:litellmkey
         litellmmodels:litellmmodel
+        litellmteams:litellmteam
         ollamamodels:ollamamodel
         n8nadminusers:n8nadminuser
         n8napikeys:n8napikey

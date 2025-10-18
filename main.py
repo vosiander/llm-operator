@@ -11,6 +11,7 @@ injector = Injector([KubeModule(), LockModule()])
 default_plugins = [
     "litellm_key",
     "litellm_model",
+    "litellm_team",
     "n8n_admin_user",
     "n8n_api_key",
     "ollama_model",
