@@ -3,6 +3,7 @@ from loguru import logger
 import requests
 import os
 
+
 @singleton
 class ModelManagement:
     def __init__(self):
@@ -15,7 +16,7 @@ class ModelManagement:
             url = f"{ollama_host}/api/show"
             payload = {"model": f"{name}:{tag}"}
             response = requests.post(url, json=payload, timeout=30)
-            
+
             if response.status_code == 200:
                 logger.info(f"Successfully retrieved model info for {name}")
                 return response.json()
@@ -25,7 +26,7 @@ class ModelManagement:
             else:
                 logger.error(f"Failed to get model {name}: {response.status_code} - {response.text}")
                 return None
-                
+
         except requests.RequestException as e:
             logger.error(f"Error connecting to Ollama at {ollama_host}: {e}")
             return None
@@ -36,7 +37,7 @@ class ModelManagement:
             url = f"{ollama_host}/api/delete"
             payload = {"model": f"{name}:{tag}"}
             response = requests.delete(url, json=payload, timeout=30)
-            
+
             if response.status_code == 200:
                 logger.info(f"Successfully deleted model {name}")
                 return True
@@ -46,7 +47,7 @@ class ModelManagement:
             else:
                 logger.error(f"Failed to delete model {name}: {response.status_code} - {response.text}")
                 return False
-                
+
         except requests.RequestException as e:
             logger.error(f"Error connecting to Ollama at {ollama_host}: {e}")
             return False
@@ -56,23 +57,18 @@ class ModelManagement:
         try:
             # Format model name with tag
             model_name = f"{name}:{tag}"
-            
+
             url = f"{ollama_host}/api/pull"
             payload = {"model": model_name, "stream": False}
             response = requests.post(url, json=payload, timeout=self.pull_timeout)  # Longer timeout for model downloads
-            
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("status") == "success":
-                    logger.info(f"Successfully pulled model {model_name}")
-                    return True
-                else:
-                    logger.error(f"Failed to pull model {model_name}: {result}")
-                    return False
-            else:
-                logger.error(f"Failed to pull model {model_name}: {response.status_code} - {response.text}")
-                return False
-                
+
+            if response.status_code == 200 and response.json().get("status") == "success":
+                logger.info(f"Successfully pulled model {model_name}")
+                return True
+
+            logger.error(f"Failed to pull model {model_name} for {ollama_host}: {response.status_code} - {response.text}")
+            return False
+
         except requests.RequestException as e:
             logger.error(f"Error connecting to Ollama at {ollama_host}: {e}")
             return False

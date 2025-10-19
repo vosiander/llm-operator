@@ -3,6 +3,7 @@ from kubernetes.client import ApiClient
 from loguru import logger
 import kopf
 import kr8s
+import os
 
 from src.n8n_api_key.manager import ApiKeyManagement
 from src.n8n_api_key.crd import N8nApiKey
@@ -156,7 +157,7 @@ def delete_fn(spec, name, namespace, **kwargs):
     except Exception as e:
         logger.error(f"Error during N8nApiKey deletion for {namespace}/{name}: {e}")
 
-@kopf.on.timer("ops.veitosiander.de", "v1", "N8nApiKey", interval=60)
+@kopf.on.timer("ops.veitosiander.de", "v1", "N8nApiKey", interval=os.getenv("LLM_OPERATOR_RECONCILE_INTERVAL", 600))
 def timer_fn(spec, name, namespace, **kwargs):
     """Reconcile N8nApiKey resources by ensuring the Kubernetes secret exists"""
     logger.info(f"Reconciling N8nApiKey resource: {namespace}/{name}")

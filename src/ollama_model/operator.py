@@ -3,6 +3,7 @@ from kubernetes.client import ApiClient
 from loguru import logger
 import kopf
 import kr8s
+import os
 
 from src.ollama_model.manager import ModelManagement
 from src.ollama_model.crd import OllamaModel
@@ -17,7 +18,7 @@ def register_handlers(inj: Injector):
     logger.info("Registering OllamaModel handlers...")
     OllamaModel.install(api, exist_ok=True)
 
-@kopf.on.timer("ops.veitosiander.de", "v1", "OllamaModel", interval=60)
+@kopf.on.timer("ops.veitosiander.de", "v1", "OllamaModel", interval=os.getenv("LLM_OPERATOR_RECONCILE_INTERVAL", 600))
 def timer_fn(spec, name, namespace, **kwargs):
     if not spec.get('model') or not spec.get('ollama_host'):
         logger.warning(f"Model or ollama_host not specified for {namespace}/{name}, skipping reconciliation.")
@@ -52,6 +53,7 @@ def delete_fn(spec, name, namespace, **kwargs):
     except Exception as e:
         logger.error(f"Failed to delete model {spec['model']}: {e}")
 
+@kopf.on.update("ops.veitosiander.de", "v1", "OllamaModel")
 @kopf.on.create("ops.veitosiander.de", "v1", "OllamaModel")
 def create_fn(spec, name, namespace, **kwargs):
     model_management = injector.get(ModelManagement)

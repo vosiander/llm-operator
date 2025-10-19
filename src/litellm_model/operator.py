@@ -3,6 +3,7 @@ from kubernetes.client import ApiClient
 from loguru import logger
 import kopf
 import kr8s
+import os
 
 from src.litellm_model.manager import ModelManagement
 from src.litellm_model.crd import LiteLLMModel
@@ -17,7 +18,7 @@ def register_handlers(inj: Injector):
     logger.info("Registering LiteLLMModel handlers...")
     LiteLLMModel.install(api, exist_ok=True)
 
-@kopf.on.timer("ops.veitosiander.de", "v1", "LiteLLMModel", interval=30)
+@kopf.on.timer("ops.veitosiander.de", "v1", "LiteLLMModel", interval=os.getenv("LLM_OPERATOR_RECONCILE_INTERVAL", 600))
 def timer_fn(spec, name, namespace, **kwargs):
     if not spec.get('is_installed', False):
         logger.warning(f"model not installed for {namespace}/{name}, skipping reconciliation.")
