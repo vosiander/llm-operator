@@ -38,7 +38,6 @@ def delete_fn(spec, name, namespace, **kwargs):
             logger.info(f"LiteLLMTeam {namespace}/{name} deleted successfully.")
         except Exception as e:
             logger.error(f"Failed to delete team {spec['team_id']}: {e}")
-            pass
     else:
         logger.warning(f"Team ID not set for {namespace}/{name}, skipping deletion.")
 
@@ -51,7 +50,12 @@ def create_fn(spec, name, namespace, **kwargs):
 
     logger.info(f"Creating LiteLLMTeam resource: {namespace}/{name} with spec: {spec}")
 
-    cr = list(kr8s.get("LiteLLMTeam.ops.veitosiander.de", name, namespace=namespace))[0]
+    crs = list(kr8s.get("LiteLLMTeam.ops.veitosiander.de", name, namespace=namespace))
+    if len(crs) == 0:
+        logger.error(f"CR LiteLLMTeam {namespace}/{name} not found.")
+        raise kopf.TemporaryError(f"CR LiteLLMTeam {namespace}/{name} not found.", delay=30)
+
+    cr = crs[0]
     logger.info(f"Fetched CR: {cr}")
 
     try:

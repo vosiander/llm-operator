@@ -10,7 +10,6 @@ from src.litellm_key.manager import KeyManagement
 injector: Injector = None
 api: ApiClient = None
 
-
 def register_handlers(inj: Injector):
     global injector, api
     injector = inj

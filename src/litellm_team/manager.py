@@ -126,7 +126,7 @@ class TeamManagement:
     def add_models_to_team(self, litellm_host: str, litellm_api_key: str, team_id: str, models: List[str]) -> None:
         """Add model permissions to a team."""
         try:
-            logger.trace(f"Adding model {",".join(models)} to team {team_id}")
+            logger.trace(f"Adding models {",".join(models)} to team {team_id}")
             response = requests.post(
                 url=f"{litellm_host}/team/model/add",
                 headers={"Authorization": f"Bearer {litellm_api_key}"},
@@ -139,9 +139,9 @@ class TeamManagement:
             logger.trace(f"Add model response: {response.status_code} - {response.text}")
 
             if response.status_code == 200:
-                logger.info(f"Successfully added model {",".join(models)} to team {team_id}")
+                logger.info(f"Successfully added models {",".join(models)} to team {team_id}")
             else:
-                logger.warning(f"Failed to add model {",".join(models)} to team: {response.status_code} - {response.text}")
+                logger.warning(f"Failed to add models {",".join(models)} to team: {response.status_code} - {response.text}")
 
         except Exception as e:
             logger.error(f"Exception while adding models to team: {e}")

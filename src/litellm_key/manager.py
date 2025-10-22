@@ -38,8 +38,7 @@ class KeyManagement:
             logger.error(f"Failed to delete existing key: {del_rsp.status_code} - {del_rsp.text}")
             raise ValueError(f"Failed to delete existing key: {del_rsp.status_code} - {del_rsp.text}")
 
-    def generate_key(self, litellm_host: str, litellm_api_key: str, user_id: str, key_alias: str, key_name: str,
-                     team_id: str, models=None):
+    def generate_key(self, litellm_host: str, litellm_api_key: str, user_id: str, key_alias: str, key_name: str, team_id: str, models=None):
         if models is None:
             models = []
 
@@ -63,6 +62,7 @@ class KeyManagement:
         logger.trace(f"Response from LiteLLM: {rsp.status_code} - {rsp.text}")
 
         rsp_json = rsp.json()
+        logger.trace(f"Response JSON: {rsp_json}")
         if rsp.status_code != 200:
             logger.error(f"Failed to generate key: {rsp.status_code} - {rsp.text}")
             raise ValueError(f"Failed to generate key: {rsp.status_code} - {rsp.text}")
