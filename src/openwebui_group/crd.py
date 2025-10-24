@@ -33,10 +33,10 @@ class OpenWebUIGroup(kubecrd.KubeResourceBase):
     # Group configuration
     name: str
     description: str
+    existing_secret: str = field(metadata={"description": "Name of the Kubernetes Secret containing the OpenWebUI API key in the same namespace as this resource"})
+    
+    # Optional fields with defaults
     permissions: OpenWebUIGroupPermissions = field(default=None)
     user_emails: List[str] = field(default_factory=list)
-
-    # Auto-populated fields
     group_id: str = field(default="")
-    openwebui_api_key: str = field(default="", metadata={"description": "Optional: API key for authentication. If not provided, the operator will attempt to use other authentication methods"})
     is_installed: bool = field(default=False, metadata={"description": "Indicates if the group is installed."})

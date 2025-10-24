@@ -27,13 +27,13 @@ class OpenWebUIChannel(kubecrd.KubeResourceBase):
 
     # Channel configuration
     name: str
+    existing_secret: str = field(metadata={"description": "Name of the Kubernetes Secret containing the OpenWebUI API key in the same namespace as this resource"})
+    
+    # Optional fields with defaults
     description: str = field(default="")
     type: str = field(default=None)
     data: OpenWebUIChannelData = field(default=None)
     meta: OpenWebUIChannelMeta = field(default=None)
     access_control: OpenWebUIChannelAccessControl = field(default=None)
-
-    # Auto-populated fields
     channel_id: str = field(default="")
-    openwebui_api_key: str = field(default="", metadata={"description": "Optional: API key for authentication. If not provided, the operator will attempt to use other authentication methods"})
     is_installed: bool = field(default=False, metadata={"description": "Indicates if the channel is installed."})

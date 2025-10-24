@@ -44,6 +44,9 @@ class OpenWebUIToolServer(kubecrd.KubeResourceBase):
     # Tool server configuration matching API format
     url: str
     path: str
+    existing_secret: str = field(metadata={"description": "Name of the Kubernetes Secret containing the OpenWebUI API key in the same namespace as this resource"})
+    
+    # Optional fields with defaults
     type: str = field(default="openapi")
     auth_type: str = field(default="bearer")
     key: str = field(default="")
@@ -51,6 +54,4 @@ class OpenWebUIToolServer(kubecrd.KubeResourceBase):
     spec_type: str = field(default="url")
     info: OpenWebUIToolServerInfo = field(default=None)
     config: OpenWebUIToolServerConfig = field(default=None)
-
-    openwebui_api_key: str = field(default="", metadata={"description": "Optional: API key for authentication. If not provided, the operator will attempt to use other authentication methods"})
     is_installed: bool = field(default=False, metadata={"description": "Indicates if the tool server is installed."})

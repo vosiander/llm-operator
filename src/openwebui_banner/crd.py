@@ -11,10 +11,10 @@ class OpenWebUIBanner(kubecrd.KubeResourceBase):
     id: str
     type: str
     content: str
+    existing_secret: str = field(metadata={"description": "Name of the Kubernetes Secret containing the OpenWebUI API key in the same namespace as this resource"})
     
     # Optional fields with defaults
     dismissible: bool = field(default=True)
     timestamp: int = field(default=0)
     title: str = field(default="")
-    openwebui_api_key: str = field(default="", metadata={"description": "Optional: API key for authentication. If not provided, the operator will attempt to use other authentication methods"})
     is_installed: bool = field(default=False, metadata={"description": "Indicates if the banner is installed."})
