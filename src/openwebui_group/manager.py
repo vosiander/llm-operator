@@ -69,14 +69,15 @@ class GroupManagement:
             logger.warning("No users found in OpenWebUI, cannot translate emails to IDs")
             return []
         
-        # Create email-to-id mapping
-        email_to_id = {user.get('email'): user.get('id') for user in users if user.get('email') and user.get('id')}
+        # Create email-to-id mapping with lowercase keys for case-insensitive comparison
+        email_to_id = {user.get('email').lower(): user.get('id') for user in users if user.get('email') and user.get('id')}
         
-        # Translate emails to IDs
+        # Translate emails to IDs using case-insensitive lookup
         user_ids = []
         for email in user_emails:
-            if email in email_to_id:
-                user_ids.append(email_to_id[email])
+            email_lower = email.lower()
+            if email_lower in email_to_id:
+                user_ids.append(email_to_id[email_lower])
             else:
                 logger.warning(f"Email '{email}' not found in OpenWebUI user list")
         
