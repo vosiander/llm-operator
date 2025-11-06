@@ -20,6 +20,8 @@ default_plugins = [
     "openwebui_group",
     "openwebui_prompt",
     "openwebui_tool_server",
+    "uptime_kuma_setup",
+    "uptime_kuma_monitor",
 ]
 
 @kopf.on.startup()

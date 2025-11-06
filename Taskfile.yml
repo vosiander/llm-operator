@@ -49,6 +49,8 @@ tasks:
         openwebuigroups:openwebuigroup
         openwebuiprompts:openwebuiprompt
         openwebuitoolservers:openwebuitoolserver
+        uptimekumasetups:uptimekumasetup
+        uptimekumamonitors:uptimekumamonitor
       CRD_DOMAIN: ops.veitosiander.de
       PATCH_FINALIZERS: '{"metadata":{"finalizers":[]}}'
     cmds:

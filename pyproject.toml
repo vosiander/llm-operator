@@ -25,4 +25,5 @@ dependencies = [
     "injector",
     "redis>=5.0.0",
     "python-redis-lock>=4.0.0",
+    "uptime-kuma-api>=1.2.1",
 ]
