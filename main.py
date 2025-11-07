@@ -5,6 +5,9 @@ from src.kube.module import KubeModule
 from src.lock_manager import LockModule
 import os
 import importlib
+from src.logging_interceptor.handler import setup_logging
+
+setup_logging()
 
 injector = Injector([KubeModule(), LockModule()])
 

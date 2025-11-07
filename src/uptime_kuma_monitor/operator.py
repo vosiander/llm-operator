@@ -55,68 +55,91 @@ def register_handlers(inj: Injector):
     UptimeKumaMonitor.install(api, exist_ok=True)
 
 
-@kopf.on.create("ops.veitosiander.de", "v1", "UptimeKumaMonitor")
 @kopf.on.update("ops.veitosiander.de", "v1", "UptimeKumaMonitor")
-def upsert_monitor(spec, name, namespace, **kwargs):
+def update_monitor(spec, name, namespace, **kwargs):
     monitor_management = injector.get(MonitorManagement)
-    
-    logger.info(f"Upserting UptimeKumaMonitor: {namespace}/{name}")
-    
+    logger.info(f"Updating UptimeKumaMonitor resource: {namespace}/{name}")
+
+    monitor_id = spec.get('monitor_id')
+    if not monitor_id:
+        logger.warning(f"No monitor_id for {namespace}/{name}, skipping update.")
+        return
+
     kuma_api = None
     try:
-        # Retrieve credentials from secret in the same namespace as the CR
         username, password = get_credentials_from_secret(
             spec['existing_secret'],
             namespace
         )
-        
-        # Connect to Uptime Kuma
+
         kuma_api = monitor_management.connect_to_kuma(
             spec['kuma_url'],
             username,
             password
         )
-        
-        # Build monitor configuration
+
+        existing_monitor = monitor_management.get_monitor_by_id(kuma_api, monitor_id)
+        if not existing_monitor:
+            logger.warning(f"Monitor with id '{monitor_id}' not found. Skipping update.")
+            return
+
         monitor_config = monitor_management.build_monitor_config(spec)
-        
-        # Upsert monitor
-        monitor_id = spec.get('monitor_id', 0)
-        result = monitor_management.upsert_monitor(kuma_api, monitor_id, monitor_config)
-        
-        # Extract monitor ID from result
-        new_monitor_id = result.get('monitorID', monitor_id)
-        
-        # Update status fields if needed
-        needs_update = False
-        updates = {}
-        
-        if new_monitor_id != spec.get('monitor_id', 0):
-            updates['monitor_id'] = new_monitor_id
-            needs_update = True
-        
-        if not spec.get('is_installed', False):
-            updates['is_installed'] = True
-            needs_update = True
-        
-        if needs_update:
-            cr = list(kr8s.get("UptimeKumaMonitor.ops.veitosiander.de/v1", name, namespace=namespace))[0]
-            cr.patch({"spec": updates})
-            logger.info(f"Updated status fields for {namespace}/{name}: {updates}")
-        
-        logger.info(f"UptimeKumaMonitor {namespace}/{name} upserted successfully with ID {new_monitor_id}")
-        return {"status": "upserted", "monitor_id": new_monitor_id}
-        
-    except ValueError as e:
-        logger.error(f"Failed to retrieve credentials for {namespace}/{name}: {e}")
-        raise kopf.TemporaryError(f"Failed to retrieve credentials: {e}", delay=30)
+        monitor_management.update_monitor(kuma_api, monitor_id, monitor_config)
+        logger.info(f"Successfully updated monitor with ID {monitor_id}")
+
     except Exception as e:
-        logger.error(f"Failed to upsert monitor for {namespace}/{name}: {e}")
-        raise kopf.TemporaryError(f"Failed to upsert monitor: {e}", delay=30)
+        logger.error(f"Failed to update monitor for {namespace}/{name}: {e}")
+        raise
     finally:
         if kuma_api:
             monitor_management.disconnect_api(kuma_api)
 
+@kopf.on.create("ops.veitosiander.de", "v1", "UptimeKumaMonitor")
+def create_monitor(spec, name, namespace, **kwargs):
+    monitor_management = injector.get(MonitorManagement)
+    logger.info(f"Creating UptimeKumaMonitor resource: {namespace}/{name}")
+
+    kuma_api = None
+    try:
+        username, password = get_credentials_from_secret(
+            spec['existing_secret'],
+            namespace
+        )
+
+        kuma_api = monitor_management.connect_to_kuma(
+            spec['kuma_url'],
+            username,
+            password
+        )
+
+        existing_monitor = monitor_management.get_monitor_by_name(kuma_api, spec['name'])
+        if existing_monitor:
+            logger.info(f"Monitor with name '{spec['name']}' already exists. Skipping creation.")
+            monitor_id = existing_monitor['id']
+            cr = list(kr8s.get("UptimeKumaMonitor.ops.veitosiander.de", name, namespace=namespace))[0]
+            cr.patch({"spec": {"monitor_id": monitor_id, "is_installed": True}})
+            logger.info(f"UptimeKumaMonitor {namespace}/{name} status updated with existing monitor_id: {monitor_id}")
+            return {'monitor_id': monitor_id}
+
+        monitor_config = monitor_management.build_monitor_config(spec)
+        created_monitor = monitor_management.create_monitor(kuma_api, monitor_config)
+
+        monitor_id = created_monitor.get('monitorID')
+        if monitor_id:
+            logger.info(f"Successfully created monitor with ID {monitor_id}")
+            # Update the CR with the new monitor_id
+            cr = list(kr8s.get("UptimeKumaMonitor.ops.veitosiander.de", name, namespace=namespace))[0]
+            cr.patch({"spec": {"monitor_id": monitor_id, "is_installed": True}})
+            logger.info(f"UptimeKumaMonitor {namespace}/{name} status updated with monitor_id: {monitor_id}")
+        else:
+            logger.error("Failed to get monitorID from creation result.")
+
+    except Exception as e:
+        logger.error(f"Failed to create monitor for {namespace}/{name}: {e}")
+        raise
+    finally:
+        if kuma_api:
+            monitor_management.disconnect_api(kuma_api)
 
 @kopf.on.delete("ops.veitosiander.de", "v1", "UptimeKumaMonitor")
 def delete_monitor(spec, name, namespace, **kwargs):

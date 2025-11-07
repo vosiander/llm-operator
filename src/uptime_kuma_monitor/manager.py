@@ -65,6 +65,27 @@ class MonitorManagement:
             logger.error(f"Failed to get monitor {monitor_id}: {e}")
             return None
 
+    def get_monitor_by_name(self, api, name: str):
+        """Fetch monitor details by name.
+
+        Args:
+            api: UptimeKumaApi instance
+            name: Monitor name to fetch
+
+        Returns:
+            dict: Monitor details or None if not found
+        """
+        try:
+            monitors = api.get_monitors()
+            for monitor in monitors:
+                if monitor.get('name') == name:
+                    return monitor
+            logger.warning(f"Monitor with name {name} not found")
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get monitor {name}: {e}")
+            return None
+
     def create_monitor(self, api, monitor_data: dict):
         """Create new monitor.
         
@@ -132,33 +153,6 @@ class MonitorManagement:
         except Exception as e:
             logger.error(f"Failed to delete monitor {monitor_id}: {e}")
             raise UptimeKumaMonitorException(f"Failed to delete monitor: {e}")
-
-    def upsert_monitor(self, api, monitor_id: int, monitor_data: dict):
-        """Idempotent create/update.
-        
-        Args:
-            api: UptimeKumaApi instance
-            monitor_id: Monitor ID (0 for new monitor)
-            monitor_data: Monitor configuration
-            
-        Returns:
-            dict: Monitor result with monitorID
-            
-        Raises:
-            UptimeKumaMonitorException: If operation fails
-        """
-        if monitor_id > 0:
-            # Check if monitor exists
-            existing = self.get_monitor_by_id(api, monitor_id)
-            if existing:
-                logger.info(f"Monitor {monitor_id} exists, updating...")
-                return self.update_monitor(api, monitor_id, monitor_data)
-            else:
-                logger.warning(f"Monitor {monitor_id} not found, creating new monitor...")
-        
-        # Create new monitor
-        logger.info("Creating new monitor...")
-        return self.create_monitor(api, monitor_data)
 
     def validate_monitor_type(self, monitor_type: str) -> bool:
         """Check if type is http/tcp/ping.
