@@ -10,9 +10,9 @@ class OpenWebUIPromptAccessControl(kubecrd.KubeResourceBase):
 
 
 @dataclass
-class OpenWebUIPrompt(kubecrd.KubeResourceBase):
+class OpenWebUIPromptV2(kubecrd.KubeResourceBase):
     __group__ = "ops.veitosiander.de"
-    __version__ = "v1"
+    __version__ = "v2"
 
     openwebui_host: str
 

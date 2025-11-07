@@ -2,9 +2,9 @@ import kubecrd
 from dataclasses import dataclass, field
 
 @dataclass
-class OpenWebUIBanner(kubecrd.KubeResourceBase):
+class OpenWebUIBannerV2(kubecrd.KubeResourceBase):
     __group__ = "ops.veitosiander.de"
-    __version__ = "v1"
+    __version__ = "v2"
 
     # Required fields
     openwebui_host: str

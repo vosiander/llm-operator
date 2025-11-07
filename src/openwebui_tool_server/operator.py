@@ -6,7 +6,8 @@ import kr8s
 import base64
 
 from src.openwebui_tool_server.manager import ToolServerManagement
-from src.openwebui_tool_server.crd import OpenWebUIToolServer
+from src.openwebui_tool_server.crd_v1 import OpenWebUIToolServerV1
+from src.openwebui_tool_server.crd_v2 import OpenWebUIToolServerV2
 
 injector: Injector = None
 api: ApiClient = None
@@ -35,16 +36,72 @@ def register_handlers(inj: Injector):
     global injector, api
     injector = inj
     api = inj.get(ApiClient)
+    logger.info("Registering OpenWebUIToolServer handlers (v1 and v2)...")
+    OpenWebUIToolServerV1.install(api, exist_ok=True)
+    OpenWebUIToolServerV2.install(api, exist_ok=True)
 
-    logger.info("Registering OpenWebUIToolServer handlers...")
-    OpenWebUIToolServer.install(api, exist_ok=True)
 
-
+# V1 Handlers (DEPRECATED - using openwebui_api_key)
 @kopf.on.delete("ops.veitosiander.de", "v1", "OpenWebUIToolServer")
-def delete_fn(spec, name, namespace, **kwargs):
+def delete_v1(spec, name, namespace, **kwargs):
     tool_server_management = injector.get(ToolServerManagement)
     
-    logger.info(f"Deleting OpenWebUIToolServer resource: {namespace}/{name} with spec: {spec}")
+    logger.warning(f"Deleting OpenWebUIToolServer v1 resource (DEPRECATED): {namespace}/{name}")
+    logger.warning("Please migrate to v2 using existing_secret field")
+    
+    api_key = spec.get('openwebui_api_key', '').strip()
+    
+    if not api_key:
+        logger.info(f"No API key for {namespace}/{name}, nothing to delete.")
+        return
+    
+    try:
+        tool_server_management.delete_tool_server(spec['openwebui_host'], api_key, spec['url'])
+        logger.info(f"OpenWebUIToolServer v1 {namespace}/{name} deleted successfully.")
+    except Exception as e:
+        logger.error(f"Failed to delete tool server {spec['url']}: {e}")
+        pass
+
+
+@kopf.on.create("ops.veitosiander.de", "v1", "OpenWebUIToolServer")
+@kopf.on.update("ops.veitosiander.de", "v1", "OpenWebUIToolServer")
+def upsert_v1(spec, name, namespace, **kwargs):
+    tool_server_management = injector.get(ToolServerManagement)
+    
+    logger.warning(f"Upserting OpenWebUIToolServer v1 resource (DEPRECATED): {namespace}/{name}")
+    logger.warning("Please migrate to v2 using existing_secret field")
+    
+    api_key = spec.get('openwebui_api_key', '').strip()
+    
+    if not api_key:
+        logger.info(f"No API key for {namespace}/{name}, skipping upsert.")
+        return {"status": "waiting_for_api_key"}
+    
+    try:
+        server = tool_server_management.upsert_tool_server(
+            spec['openwebui_host'],
+            api_key,
+            spec
+        )
+        
+        # Update is_installed flag if needed
+        if not spec.get('is_installed', False):
+            cr = list(kr8s.get("OpenWebUIToolServer.ops.veitosiander.de/v1", name, namespace=namespace))[0]
+            cr.patch({"spec": {"is_installed": True}})
+        
+        logger.info(f"OpenWebUIToolServer v1 {namespace}/{name} upserted successfully.")
+        return {"status": "upserted"}
+    except Exception as e:
+        logger.error(f"Failed to upsert tool server for {namespace}/{name}: {e}")
+        raise kopf.TemporaryError(f"Failed to upsert tool server: {e}", delay=30)
+
+
+# V2 Handlers (NEW - using existing_secret)
+@kopf.on.delete("ops.veitosiander.de", "v2", "OpenWebUIToolServer")
+def delete_v2(spec, name, namespace, **kwargs):
+    tool_server_management = injector.get(ToolServerManagement)
+    
+    logger.info(f"Deleting OpenWebUIToolServer v2 resource: {namespace}/{name}")
     
     try:
         # Retrieve API key from secret in the same namespace as the CR
@@ -54,18 +111,18 @@ def delete_fn(spec, name, namespace, **kwargs):
         )
         
         tool_server_management.delete_tool_server(spec['openwebui_host'], api_key, spec['url'])
-        logger.info(f"OpenWebUIToolServer {namespace}/{name} deleted successfully.")
+        logger.info(f"OpenWebUIToolServer v2 {namespace}/{name} deleted successfully.")
     except Exception as e:
         logger.error(f"Failed to delete tool server {spec['url']}: {e}")
         pass
 
 
-@kopf.on.create("ops.veitosiander.de", "v1", "OpenWebUIToolServer")
-@kopf.on.update("ops.veitosiander.de", "v1", "OpenWebUIToolServer")
-def upsert_fn(spec, name, namespace, **kwargs):
+@kopf.on.create("ops.veitosiander.de", "v2", "OpenWebUIToolServer")
+@kopf.on.update("ops.veitosiander.de", "v2", "OpenWebUIToolServer")
+def upsert_v2(spec, name, namespace, **kwargs):
     tool_server_management = injector.get(ToolServerManagement)
     
-    logger.info(f"Upserting OpenWebUIToolServer resource: {namespace}/{name}")
+    logger.info(f"Upserting OpenWebUIToolServer v2 resource: {namespace}/{name}")
     
     try:
         # Retrieve API key from secret in the same namespace as the CR
@@ -82,10 +139,10 @@ def upsert_fn(spec, name, namespace, **kwargs):
         
         # Update is_installed flag if needed
         if not spec.get('is_installed', False):
-            cr = list(kr8s.get("OpenWebUIToolServer.ops.veitosiander.de", name, namespace=namespace))[0]
+            cr = list(kr8s.get("OpenWebUIToolServer.ops.veitosiander.de/v2", name, namespace=namespace))[0]
             cr.patch({"spec": {"is_installed": True}})
         
-        logger.info(f"OpenWebUIToolServer {namespace}/{name} upserted successfully.")
+        logger.info(f"OpenWebUIToolServer v2 {namespace}/{name} upserted successfully.")
         return {"status": "upserted"}
     except Exception as e:
         logger.error(f"Failed to upsert tool server for {namespace}/{name}: {e}")
