@@ -2,16 +2,16 @@ import kubecrd
 from dataclasses import dataclass, field
 
 @dataclass
-class OpenWebUIBannerV2(kubecrd.KubeResourceBase):
+class OpenWebUIBanner(kubecrd.KubeResourceBase):
     __group__ = "ops.veitosiander.de"
-    __version__ = "v2"
+    __version__ = "v1"
 
     # Required fields
     openwebui_host: str
     id: str
     type: str
     content: str
-    existing_secret: str = field(metadata={"description": "Name of the Kubernetes Secret containing the OpenWebUI API key in the same namespace as this resource"})
+    existing_secret: str = field(metadata={"description": "Name of the Kubernetes Secret containing the OpenWebUI API key"})
     
     # Optional fields with defaults
     dismissible: bool = field(default=True)

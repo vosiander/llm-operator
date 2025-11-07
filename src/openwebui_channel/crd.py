@@ -19,7 +19,7 @@ class OpenWebUIChannelAccessControl(kubecrd.KubeResourceBase):
     write: list[str] = field(default_factory=lambda: ["admin", "user"])
 
 @dataclass
-class OpenWebUIChannelV1(kubecrd.KubeResourceBase):
+class OpenWebUIChannel(kubecrd.KubeResourceBase):
     __group__ = "ops.veitosiander.de"
     __version__ = "v1"
 
@@ -27,7 +27,7 @@ class OpenWebUIChannelV1(kubecrd.KubeResourceBase):
 
     # Channel configuration
     name: str
-    openwebui_api_key: str = field(default="", metadata={"description": "DEPRECATED: API key for authentication. Please migrate to v2 using existing_secret field"})
+    existing_secret: str = field(metadata={"description": "Name of the Kubernetes Secret containing the OpenWebUI API key"})
     
     # Optional fields with defaults
     description: str = field(default="")

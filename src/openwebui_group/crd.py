@@ -24,7 +24,7 @@ class OpenWebUIGroupPermissions(kubecrd.KubeResourceBase):
 
 
 @dataclass
-class OpenWebUIGroupV1(kubecrd.KubeResourceBase):
+class OpenWebUIGroup(kubecrd.KubeResourceBase):
     __group__ = "ops.veitosiander.de"
     __version__ = "v1"
 
@@ -33,7 +33,7 @@ class OpenWebUIGroupV1(kubecrd.KubeResourceBase):
     # Group configuration
     name: str
     description: str
-    openwebui_api_key: str = field(default="", metadata={"description": "DEPRECATED: API key for authentication. Please migrate to v2 using existing_secret field"})
+    existing_secret: str = field(metadata={"description": "Name of the Kubernetes Secret containing the OpenWebUI API key"})
     
     # Optional fields with defaults
     permissions: OpenWebUIGroupPermissions = field(default=None)

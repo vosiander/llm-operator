@@ -10,9 +10,9 @@ class OpenWebUIPromptAccessControl(kubecrd.KubeResourceBase):
 
 
 @dataclass
-class OpenWebUIPromptV2(kubecrd.KubeResourceBase):
+class OpenWebUIPrompt(kubecrd.KubeResourceBase):
     __group__ = "ops.veitosiander.de"
-    __version__ = "v2"
+    __version__ = "v1"
 
     openwebui_host: str
 
@@ -20,7 +20,7 @@ class OpenWebUIPromptV2(kubecrd.KubeResourceBase):
     command: str  # unique identifier
     title: str
     content: str
-    existing_secret: str = field(metadata={"description": "Name of the Kubernetes Secret containing the OpenWebUI API key in the same namespace as this resource"})
+    existing_secret: str = field(metadata={"description": "Name of the Kubernetes Secret containing the OpenWebUI API key"})
     
     # Optional fields with defaults
     is_installed: bool = field(default=False, metadata={"description": "Indicates if the prompt is installed."})
