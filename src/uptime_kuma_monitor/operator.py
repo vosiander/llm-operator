@@ -89,7 +89,7 @@ def update_monitor(spec, name, namespace, **kwargs):
 
     except Exception as e:
         logger.error(f"Failed to update monitor for {namespace}/{name}: {e}")
-        raise
+        raise kopf.TemporaryError(f"Update failed: {e}", delay=60)
     finally:
         if kuma_api:
             monitor_management.disconnect_api(kuma_api)
@@ -136,7 +136,7 @@ def create_monitor(spec, name, namespace, **kwargs):
 
     except Exception as e:
         logger.error(f"Failed to create monitor for {namespace}/{name}: {e}")
-        raise
+        raise kopf.TemporaryError(f"Update failed: {e}", delay=60)
     finally:
         if kuma_api:
             monitor_management.disconnect_api(kuma_api)
@@ -173,8 +173,7 @@ def delete_monitor(spec, name, namespace, **kwargs):
         
     except Exception as e:
         logger.error(f"Failed to delete monitor {monitor_id} for {namespace}/{name}: {e}")
-        # Don't raise exception on delete to allow cleanup to proceed
-        pass
+        raise kopf.TemporaryError(f"Update failed: {e}", delay=60)
     finally:
         if kuma_api:
             monitor_management.disconnect_api(kuma_api)

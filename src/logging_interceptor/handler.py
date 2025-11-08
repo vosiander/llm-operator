@@ -26,5 +26,5 @@ def setup_logging():
         logging.getLogger(name).handlers = []
         logging.getLogger(name).propagate = True
 
-    logger.configure(handlers=[{"sink": sys.stdout, "serialize": False}])
+    logger.configure(handlers=[{"sink": sys.stdout, "serialize": False, "colorize": True}])
 
